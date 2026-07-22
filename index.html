@@ -276,6 +276,7 @@
         Mostrar estoques zerados
       </label>
       <button class="ghost" id="btn-sync-magis5">Sincronizar Magis5</button>
+      <button class="ghost" id="btn-conectar-ml">Conectar Mercado Livre</button>
       <div class="date-field">
         <span>CMV Contábil (Importados) em:</span>
         <input type="date" id="data-cmv">
@@ -811,7 +812,50 @@ async function sincronizarMagis5(){
   }
 }
 
+async function conectarMercadoLivre(){
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/ml-auth-url`, {
+      headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    const data = await resp.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      toast('Erro ao montar link de autorização');
+    }
+  } catch (err) {
+    toast('Erro: ' + err.message);
+  }
+}
+
+async function verificarCallbackML(){
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (!code) return;
+
+  toast('Finalizando conexão com o Mercado Livre…');
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/ml-oauth-exchange`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    const resultado = await resp.json();
+    if (resultado.ok) {
+      toast('Mercado Livre conectado com sucesso!');
+    } else {
+      toast('Erro ao conectar Mercado Livre: ' + JSON.stringify(resultado.error));
+    }
+  } catch (err) {
+    toast('Erro ao conectar Mercado Livre: ' + err.message);
+  } finally {
+    // limpa o ?code= da URL pra n\u00e3o tentar de novo se recarregar a p\u00e1gina
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+
 document.getElementById('btn-sync-magis5').addEventListener('click', sincronizarMagis5);
+document.getElementById('btn-conectar-ml').addEventListener('click', conectarMercadoLivre);
 document.getElementById('btn-refresh').addEventListener('click', carregarTudo);
 document.getElementById('btn-exportar').addEventListener('click', exportarFechamento);
 document.getElementById('btn-novo').addEventListener('click', () => {
@@ -834,6 +878,7 @@ document.getElementById('btn-pendentes').addEventListener('click', () => {
 
 carregarTudo();
 carregarPendentes();
+verificarCallbackML();
 </script>
 </body>
 </html>
