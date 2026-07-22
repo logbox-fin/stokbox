@@ -492,11 +492,23 @@ async function resolverPendente(id, status, vinculadoASku){
   const payload = { status, resolvido_em: new Date().toISOString() };
   if (vinculadoASku) payload.vinculado_a_sku = vinculadoASku;
 
+  // Busca os dados do pendente antes de resolver, pra já gravar o estoque se for vínculo
+  const pendente = PENDENTES.find(p => p.id === id);
+
   const { error } = await sb.from('skus_pendentes').update(payload).eq('id', id);
   if (error) { toast('Erro: ' + error.message); return; }
-  toast(status === 'ignorado' ? 'SKU ignorado' : 'SKU vinculado');
+
+  if (status === 'vinculado' && pendente) {
+    await sb.from('estoque_atual').upsert({
+      sku: vinculadoASku, canal: pendente.canal, saldo: pendente.saldo, atualizado_em: new Date().toISOString()
+    }, { onConflict: 'sku,canal' });
+    await sb.from('estoque_snapshots').insert({ sku: vinculadoASku, canal: pendente.canal, saldo: pendente.saldo });
+  }
+
+  toast(status === 'ignorado' ? 'SKU ignorado' : 'SKU vinculado e estoque atualizado');
   await carregarPendentes();
   renderPendentes();
+  await carregarTudo();
 }
 
 async function carregarTudo(){
