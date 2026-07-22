@@ -792,6 +792,12 @@ async function sincronizarMagis5(){
       headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }
     });
     const resultado = await resp.json();
+
+    if (resultado.diagnostico) {
+      alert('DIAGNÓSTICO MAGIS5:\n\nStatus HTTP: ' + resultado.httpStatus + '\n\nResposta:\n' + resultado.amostraResposta);
+      return;
+    }
+
     if (!resp.ok || resultado.ok === false) {
       toast('Erro na sincronização: ' + (resultado.error || resp.status));
     } else {
