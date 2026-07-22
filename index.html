@@ -275,6 +275,7 @@
         <input type="checkbox" id="chk-mostrar-zerados">
         Mostrar estoques zerados
       </label>
+      <button class="ghost" id="btn-sync-magis5">Sincronizar Magis5</button>
       <div class="date-field">
         <span>CMV Contábil (Importados) em:</span>
         <input type="date" id="data-cmv">
@@ -782,6 +783,29 @@ document.getElementById('btn-cmv-hoje').addEventListener('click', () => {
   document.getElementById('data-cmv').value = '';
   calcularCmvPorData(); render();
 });
+async function sincronizarMagis5(){
+  const btn = document.getElementById('btn-sync-magis5');
+  btn.disabled = true; btn.textContent = 'Sincronizando…';
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/sync-magis5-estoque`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }
+    });
+    const resultado = await resp.json();
+    if (!resp.ok || resultado.ok === false) {
+      toast('Erro na sincronização: ' + (resultado.error || resp.status));
+    } else {
+      toast(`Sincronizado: ${resultado.totalComDeposito} de ${resultado.totalProcessados} produtos`);
+      await carregarTudo();
+    }
+  } catch (err) {
+    toast('Erro na sincronização: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sincronizar Magis5';
+  }
+}
+
+document.getElementById('btn-sync-magis5').addEventListener('click', sincronizarMagis5);
 document.getElementById('btn-refresh').addEventListener('click', carregarTudo);
 document.getElementById('btn-exportar').addEventListener('click', exportarFechamento);
 document.getElementById('btn-novo').addEventListener('click', () => {
