@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STOQ.BOX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg: #F4F5F7;
+    --surface: #FFFFFF;
+    --surface-2: #F0F1F4;
+    --surface-3: #E7E9EE;
+    --border: #DCDFE5;
+    --text: #1B1E24;
+    --text-muted: #666E7D;
+    --text-faint: #9AA1AC;
+    --accent: #D98A1F;
+    --accent-dim: #FCEBCF;
+    --ok: #22936B;
+    --danger: #C7442E;
+    --c-meli: #D9A812;
+    --c-shp: #E05A38;
+    --c-amz: #1893A6;
+    --c-proprio: #7C8494;
+    --radius: 10px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .label{
+    font-family:'Barlow Condensed',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    font-weight:600;
+    color:var(--text-muted);
+    font-size:12px;
+  }
+  .mono{ font-family:'JetBrains Mono',monospace; font-variant-numeric: tabular-nums; }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 32px;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg, var(--surface), var(--bg));
+    position:sticky; top:0; z-index:20;
+  }
+  .brand{ display:flex; align-items:center; gap:14px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius:8px;
+    background:repeating-linear-gradient(45deg, var(--accent) 0 6px, var(--accent-dim) 6px 12px);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:18px;
+    color:#12151A; text-shadow:none;
+  }
+  .brand h1{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:700; font-size:22px; letter-spacing:0.02em;
+    text-transform:uppercase;
+  }
+  .brand span.sub{ display:block; font-size:12px; color:var(--text-muted); font-weight:400; letter-spacing:0.04em; text-transform:none; font-family:'Inter',sans-serif; }
+  header .actions{ display:flex; gap:10px; }
+
+  button{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
+    border-radius:8px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--text);
+    padding:9px 16px; cursor:pointer;
+    transition:all .15s ease;
+  }
+  button:hover{ background:var(--surface-3); border-color:#3A4150; }
+  button.primary{ background:var(--accent); color:#1A1200; border-color:var(--accent); }
+  button.primary:hover{ background:#FFBB55; }
+  button.ghost{ background:transparent; }
+
+  main{ padding:28px 32px 60px; max-width:1400px; margin:0 auto; }
+
+  .summary{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:14px;
+    margin-bottom:28px;
+  }
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px 20px;
+  }
+  .card .label{ margin-bottom:8px; }
+  .card .value{
+    font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:32px;
+  }
+  .card .value.accent{ color:var(--accent); }
+  .card .value.danger{ color:var(--danger); }
+  .card .foot{ font-size:12px; color:var(--text-faint); margin-top:4px; }
+
+  .legend{ display:flex; gap:18px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+  .legend-item{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-muted); }
+  .dot{ width:9px; height:9px; border-radius:2px; display:inline-block; }
+
+  .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:12px; flex-wrap:wrap; }
+  .search{
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:9px 14px; color:var(--text); font-size:13px; width:280px;
+  }
+  .search:focus{ outline:none; border-color:var(--accent); }
+  .toolbar-left{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .toggle-check{ display:flex; align-items:center; gap:7px; font-size:13px; color:var(--text-muted); cursor:pointer; user-select:none; }
+  .toggle-check input{ accent-color:var(--accent); width:15px; height:15px; cursor:pointer; }
+  .date-field{ display:flex; align-items:center; gap:7px; font-size:13px; color:var(--text-muted); }
+  .date-field input[type=date]{
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:7px 10px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif;
+  }
+  .date-field input[type=date]:focus{ outline:none; border-color:var(--accent); }
+  .date-field button{ padding:7px 12px; font-size:12px; }
+  .cmv-val{ font-family:'JetBrains Mono',monospace; font-size:13px; }
+  .cmv-val.sem{ color:var(--text-faint); font-family:'Inter',sans-serif; font-size:12px; }
+  .cmv-asof{ font-size:10px; color:var(--text-faint); display:block; margin-top:2px; }
+  #badge-pendentes{
+    display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px;
+    padding:0 5px; border-radius:20px; background:var(--danger); color:#fff; font-size:11px; font-weight:700;
+    margin-left:4px;
+  }
+  #badge-pendentes:empty{ display:none; }
+  .pend-row{ display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid var(--border); }
+  .pend-row:last-child{ border-bottom:none; }
+  .pend-info{ flex:1; }
+  .pend-sku{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--accent); }
+  .pend-meta{ font-size:12px; color:var(--text-muted); margin-top:2px; }
+  .pend-actions{ display:flex; gap:8px; align-items:center; }
+  .pend-actions select{
+    background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px; color:var(--text); max-width:180px;
+  }
+  .pend-actions button{ padding:6px 10px; font-size:12px; }
+
+  table{ width:100%; border-collapse:collapse; background:var(--surface); border-radius:var(--radius); overflow:hidden; border:1px solid var(--border); }
+  thead th{
+    text-align:left; padding:12px 16px; font-family:'Barlow Condensed',sans-serif;
+    text-transform:uppercase; letter-spacing:0.06em; font-size:12px; font-weight:600;
+    color:var(--text-muted); border-bottom:1px solid var(--border); background:var(--surface-2);
+  }
+  tbody tr{ border-bottom:1px solid var(--border); cursor:pointer; transition:background .1s; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface-2); }
+  td{ padding:13px 16px; font-size:14px; vertical-align:middle; }
+  td.sku{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--accent); }
+  td.muted{ color:var(--text-muted); font-size:13px; }
+  td.total{ font-family:'JetBrains Mono',monospace; font-weight:600; font-size:15px; text-align:right; }
+
+  .bar{
+    display:flex; height:8px; width:160px; border-radius:4px; overflow:hidden; background:var(--surface-3);
+  }
+  .bar div{ height:100%; }
+  .bar-empty{ color:var(--text-faint); font-size:12px; }
+
+  .badge{
+    display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600;
+    padding:3px 8px; border-radius:20px; letter-spacing:0.02em;
+  }
+  .badge.ok{ background:rgba(94,200,160,0.12); color:var(--ok); }
+  .badge.danger{ background:rgba(232,96,76,0.12); color:var(--danger); }
+
+  .empty-state{ text-align:center; padding:60px 20px; color:var(--text-muted); }
+  .empty-state .big{ font-family:'Barlow Condensed',sans-serif; font-size:22px; color:var(--text); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em; }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(8,10,14,0.7); backdrop-filter:blur(2px);
+    display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    width:100%; max-width:480px; max-height:88vh; overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-head{ padding:20px 22px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .modal-head h2{ font-family:'Barlow Condensed',sans-serif; font-size:19px; text-transform:uppercase; letter-spacing:0.03em; }
+  .modal-head .sku-tag{ font-family:'JetBrains Mono',monospace; color:var(--accent); font-size:13px; }
+  .modal-close{ background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; padding:2px 8px; }
+  .modal-body{ padding:20px 22px; }
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:12px; color:var(--text-muted); margin-bottom:6px; font-weight:600; }
+  .field input, .field select{
+    width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:8px;
+    padding:10px 12px; color:var(--text); font-size:14px; font-family:'Inter',sans-serif;
+  }
+  .field input:focus, .field select:focus{ outline:none; border-color:var(--accent); }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .channel-row{
+    display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border);
+  }
+  .channel-row:last-child{ border-bottom:none; }
+  .channel-row .dot{ width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+  .channel-row .ch-name{ flex:1; font-size:13px; color:var(--text); }
+  .channel-row input{
+    width:90px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px;
+    padding:6px 10px; color:var(--text); font-family:'JetBrains Mono',monospace; text-align:right; font-size:13px;
+  }
+  .modal-foot{ padding:16px 22px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:10px; }
+  .hint{ font-size:12px; color:var(--text-faint); margin-top:14px; line-height:1.5; }
+  .status-msg{ font-size:12px; margin-top:10px; min-height:16px; }
+  .status-msg.ok{ color:var(--ok); }
+  .status-msg.err{ color:var(--danger); }
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--surface-3); border:1px solid var(--border); color:var(--text);
+    padding:12px 20px; border-radius:10px; font-size:13px; opacity:0; pointer-events:none;
+    transition:all .25s ease; z-index:200; box-shadow:0 10px 30px rgba(0,0,0,0.4);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media(max-width:900px){
+    .summary{ grid-template-columns:repeat(2,1fr); }
+    main{ padding:20px; }
+    table{ display:block; overflow-x:auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">SB</div>
+    <h1>STOQ.BOX<span class="sub">Estoque consolidado</span></h1>
+  </div>
+  <div class="actions">
+    <button class="ghost" id="btn-pendentes">SKUs pendentes <span id="badge-pendentes"></span></button>
+    <button class="ghost" id="btn-refresh">Atualizar</button>
+    <button class="primary" id="btn-exportar">Exportar fechamento do mês</button>
+    <button class="primary" id="btn-novo">+ Novo produto</button>
+  </div>
+</header>
+
+<main>
+
+  <div class="summary">
+    <div class="card">
+      <div class="label">SKUs cadastrados</div>
+      <div class="value" id="s-total-skus">—</div>
+      <div class="foot">no cadastro mestre</div>
+    </div>
+    <div class="card">
+      <div class="label">Unidades em estoque</div>
+      <div class="value accent" id="s-total-unidades">—</div>
+      <div class="foot">soma de todos os canais</div>
+    </div>
+    <div class="card">
+      <div class="label">Sem estoque lançado</div>
+      <div class="value" id="s-sem-lancamento">—</div>
+      <div class="foot">SKUs sem nenhum saldo informado</div>
+    </div>
+    <div class="card">
+      <div class="label">Última atualização</div>
+      <div class="value" id="s-ultima-att" style="font-size:19px;">—</div>
+      <div class="foot">lançamento mais recente</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="dot" style="background:var(--c-meli)"></span> Full Mercado Livre</div>
+    <div class="legend-item"><span class="dot" style="background:var(--c-shp)"></span> Full Shopee</div>
+    <div class="legend-item"><span class="dot" style="background:var(--c-amz)"></span> Full Amazon</div>
+    <div class="legend-item"><span class="dot" style="background:var(--c-proprio)"></span> Estoque próprio</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <input class="search" id="busca" placeholder="Buscar por SKU, nome ou marca…">
+      <label class="toggle-check">
+        <input type="checkbox" id="chk-mostrar-zerados">
+        Mostrar estoques zerados
+      </label>
+      <div class="date-field">
+        <span>CMV Contábil (Importados) em:</span>
+        <input type="date" id="data-cmv">
+        <button id="btn-cmv-hoje" class="ghost">Hoje</button>
+      </div>
+    </div>
+    <div class="label" id="contagem">—</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>SKU</th>
+        <th>Produto</th>
+        <th>Marca</th>
+        <th>NCM</th>
+        <th>Composição</th>
+        <th style="text-align:right;">Total</th>
+        <th style="text-align:right;">CMV Contábil</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <div class="empty-state" id="empty" style="display:none;">
+    <div class="big">Nenhum produto encontrado</div>
+    <div>Ajuste sua busca ou cadastre um novo SKU.</div>
+  </div>
+
+</main>
+
+<!-- Modal: editar estoque de um produto -->
+<div class="overlay" id="overlay-estoque">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2>Lançar estoque</h2>
+        <div class="sku-tag" id="m-sku-label"></div>
+      </div>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="channel-row">
+        <span class="dot" style="background:var(--c-meli)"></span>
+        <span class="ch-name">Full Mercado Livre</span>
+        <input type="number" min="0" id="ch-meli" placeholder="0">
+      </div>
+      <div class="channel-row">
+        <span class="dot" style="background:var(--c-shp)"></span>
+        <span class="ch-name">Full Shopee</span>
+        <input type="number" min="0" id="ch-shp" placeholder="0">
+      </div>
+      <div class="channel-row">
+        <span class="dot" style="background:var(--c-amz)"></span>
+        <span class="ch-name">Full Amazon</span>
+        <input type="number" min="0" id="ch-amz" placeholder="0">
+      </div>
+      <div class="channel-row">
+        <span class="dot" style="background:var(--c-proprio)"></span>
+        <span class="ch-name">Estoque próprio (Magis5)</span>
+        <input type="number" min="0" id="ch-proprio" placeholder="0">
+      </div>
+      <p class="hint">Por enquanto esses saldos são lançados manualmente. Quando a sincronização automática com Mercado Livre, Shopee, Amazon e Magis5 estiver ativa, esses campos serão preenchidos sozinhos — mas você poderá corrigir manualmente sempre que quiser.</p>
+      <div class="status-msg" id="m-status"></div>
+    </div>
+    <div class="modal-foot" style="justify-content:space-between;">
+      <button class="ghost" id="btn-excluir-produto" style="color:var(--danger); border-color:var(--danger);">Excluir produto</button>
+      <div style="display:flex; gap:10px;">
+        <button class="ghost" data-close>Cancelar</button>
+        <button class="primary" id="btn-salvar-estoque">Salvar estoque</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: novo produto -->
+<div class="overlay" id="overlay-produto">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Novo produto</h2>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>SKU</label>
+        <input id="p-sku" placeholder="ex: VAR-0032">
+      </div>
+      <div class="field">
+        <label>Nome</label>
+        <input id="p-nome" placeholder="ex: Filtro de Aquário XYZ">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>NCM</label>
+          <input id="p-ncm" placeholder="ex: 84212100">
+        </div>
+        <div class="field">
+          <label>Marca</label>
+          <select id="p-marca">
+            <option value="VARIALL">VARIALL</option>
+            <option value="BOYU CELL">BOYU CELL</option>
+            <option value="THAMETAL">THAMETAL</option>
+          </select>
+        </div>
+      </div>
+      <div class="status-msg" id="p-status"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="ghost" data-close>Cancelar</button>
+      <button class="primary" id="btn-salvar-produto">Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Modal: SKUs pendentes -->
+<div class="overlay" id="overlay-pendentes">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head">
+      <h2>SKUs pendentes</h2>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint" style="margin-top:0; margin-bottom:16px;">Quando a sincronização automática com os marketplaces estiver ativa, SKUs que chegarem sem bater com nenhum produto cadastrado aparecem aqui — você escolhe ignorar ou vincular a um produto já existente.</p>
+      <div id="lista-pendentes"></div>
+      <div class="empty-state" id="pendentes-empty" style="display:none; padding:30px 10px;">
+        <div class="big" style="font-size:16px;">Nenhum SKU pendente</div>
+        <div style="font-size:13px;">Tudo certo por enquanto.</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="ghost" data-close>Fechar</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ====== CONFIGURAÇÃO SUPABASE ======
+const SUPABASE_URL = "https://xvecqetlptysnsjadvzb.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2ZWNxZXRscHR5c25zamFkdnpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjMxNTIsImV4cCI6MjA5MTkzOTE1Mn0.KQ1c30VsZc_JupmEov5a7v8T2M9dEMYaEY80o-eHZWY";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const CANAIS = [
+  { key:'mercado_livre_full', field:'ch-meli', color:'var(--c-meli)', label:'Full Mercado Livre' },
+  { key:'shopee_full',        field:'ch-shp',  color:'var(--c-shp)',  label:'Full Shopee' },
+  { key:'amazon_full',        field:'ch-amz',  color:'var(--c-amz)',  label:'Full Amazon' },
+  { key:'magis5_proprio',     field:'ch-proprio', color:'var(--c-proprio)', label:'Estoque próprio' }
+];
+
+let PRODUTOS = [];
+let ESTOQUE = {}; // sku -> { canal: saldo }
+let CMV_HISTORICO = []; // linhas de historico_custos, campo = 'CMV Contábil'
+let CMV_LB_DATA = {}; // sku -> { clbId: { cmv, ... } } (Importados)
+let CLB_DATAS = {}; // clbId -> data_chegada
+let CMV_NACIONAIS = {}; // sku -> { cmv_contabil, atualizado_em } (Nacionais)
+let ESTOQUE_TIPOS = {}; // canal -> { situacao, cnpj }
+let CMV_POR_SKU = {}; // sku -> { valor, data, tipo } calculado conforme data selecionada (só afeta Importados)
+let currentSku = null;
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+let PENDENTES = [];
+
+async function carregarPendentes(){
+  const { data, error } = await sb.from('skus_pendentes').select('*').eq('status', 'pendente').order('detectado_em', { ascending: false });
+  if (error) { toast('Erro ao carregar SKUs pendentes: ' + error.message); return; }
+  PENDENTES = data || [];
+  document.getElementById('badge-pendentes').textContent = PENDENTES.length > 0 ? PENDENTES.length : '';
+}
+
+function renderPendentes(){
+  const wrap = document.getElementById('lista-pendentes');
+  wrap.innerHTML = '';
+  document.getElementById('pendentes-empty').style.display = PENDENTES.length ? 'none' : 'block';
+
+  const opcoesProdutos = PRODUTOS.map(p => `<option value="${p.sku}">${p.sku} — ${p.nome || ''}</option>`).join('');
+
+  PENDENTES.forEach(pend => {
+    const row = document.createElement('div');
+    row.className = 'pend-row';
+    row.innerHTML = `
+      <div class="pend-info">
+        <div class="pend-sku">${pend.sku}</div>
+        <div class="pend-meta">${pend.canal} · ${pend.nome_recebido || 'sem nome'} · saldo ${pend.saldo ?? '—'}</div>
+      </div>
+      <div class="pend-actions">
+        <select data-sku-id="${pend.id}"><option value="">Vincular a…</option>${opcoesProdutos}</select>
+        <button data-vincular="${pend.id}">Vincular</button>
+        <button data-ignorar="${pend.id}">Ignorar</button>
+      </div>
+    `;
+    wrap.appendChild(row);
+  });
+
+  wrap.querySelectorAll('[data-ignorar]').forEach(btn => btn.addEventListener('click', () => resolverPendente(btn.dataset.ignorar, 'ignorado')));
+  wrap.querySelectorAll('[data-vincular]').forEach(btn => btn.addEventListener('click', () => {
+    const select = wrap.querySelector(`select[data-sku-id="${btn.dataset.vincular}"]`);
+    const skuAlvo = select.value;
+    if (!skuAlvo) { toast('Escolha um produto para vincular'); return; }
+    resolverPendente(btn.dataset.vincular, 'vinculado', skuAlvo);
+  }));
+}
+
+async function resolverPendente(id, status, vinculadoASku){
+  const payload = { status, resolvido_em: new Date().toISOString() };
+  if (vinculadoASku) payload.vinculado_a_sku = vinculadoASku;
+
+  const { error } = await sb.from('skus_pendentes').update(payload).eq('id', id);
+  if (error) { toast('Erro: ' + error.message); return; }
+  toast(status === 'ignorado' ? 'SKU ignorado' : 'SKU vinculado');
+  await carregarPendentes();
+  renderPendentes();
+}
+
+async function carregarTudo(){
+  const { data: produtos, error: e1 } = await sb.from('produtos').select('sku,nome,ncm,marca,tipo,unidade_medida').eq('ativo', true).order('sku');
+  if (e1) { toast('Erro ao carregar produtos: ' + e1.message); return; }
+  PRODUTOS = produtos || [];
+
+  const { data: estoque, error: e2 } = await sb.from('estoque_atual').select('sku,canal,saldo,atualizado_em');
+  if (e2) { toast('Erro ao carregar estoque: ' + e2.message); return; }
+
+  ESTOQUE = {};
+  let ultima = null;
+  (estoque || []).forEach(row => {
+    if (!ESTOQUE[row.sku]) ESTOQUE[row.sku] = {};
+    ESTOQUE[row.sku][row.canal] = row.saldo;
+    if (!ultima || new Date(row.atualizado_em) > new Date(ultima)) ultima = row.atualizado_em;
+  });
+
+  // CMV Contábil — Importados (config.lb_cmv_data + datas de chegada dos CLBs)
+  const { data: cfgRow, error: e3 } = await sb.from('config').select('valor').eq('chave', 'lb_cmv_data').maybeSingle();
+  if (e3) { toast('Erro ao carregar CMV dos Importados: ' + e3.message); }
+  CMV_LB_DATA = (cfgRow && cfgRow.valor) || {};
+
+  const { data: clbs, error: e4 } = await sb.from('cmv_clbs').select('clb_id,data_chegada');
+  if (e4) { toast('Erro ao carregar datas dos containers: ' + e4.message); }
+  CLB_DATAS = {};
+  (clbs || []).forEach(c => { CLB_DATAS[c.clb_id] = c.data_chegada; });
+
+  // CMV Contábil — Nacionais (tabela cmv_nacionais, sempre valor atual)
+  const { data: nacionais, error: e5 } = await sb.from('cmv_nacionais').select('sku,cmv_contabil,atualizado_em');
+  if (e5) { toast('Erro ao carregar CMV dos Nacionais: ' + e5.message); }
+  CMV_NACIONAIS = {};
+  (nacionais || []).forEach(n => { CMV_NACIONAIS[n.sku] = { valor: parseFloat(n.cmv_contabil), data: n.atualizado_em }; });
+
+  // Situação e CNPJ terceiro por canal (uso no fechamento do mês / Bloco K)
+  const { data: tipos, error: e6 } = await sb.from('estoque_tipos').select('canal,situacao,cnpj_terceiro');
+  if (e6) { toast('Erro ao carregar tipos de estoque: ' + e6.message); }
+  ESTOQUE_TIPOS = {};
+  (tipos || []).forEach(t => { ESTOQUE_TIPOS[t.canal] = { situacao: t.situacao, cnpj: t.cnpj_terceiro }; });
+
+  calcularCmvPorData();
+  render();
+  renderResumo(ultima);
+}
+
+// Calcula o CMV Contábil dos Importados vigente na data escolhida (ou o mais recente, se nenhuma data escolhida)
+function calcularCmvPorData(){
+  const dataStr = document.getElementById('data-cmv').value; // formato yyyy-mm-dd ou ''
+  const limite = dataStr ? new Date(dataStr + 'T23:59:59') : new Date();
+
+  CMV_POR_SKU = {};
+  for (const sku in CMV_LB_DATA) {
+    const clbsDoSku = CMV_LB_DATA[sku];
+    let melhor = null; // { data, cmv }
+    for (const clbId in clbsDoSku) {
+      const dataChegada = CLB_DATAS[clbId];
+      if (!dataChegada) continue;
+      const dataObj = new Date(dataChegada + 'T00:00:00');
+      if (dataObj > limite) continue; // container ainda não tinha chegado na data escolhida
+      if (!melhor || dataObj > melhor.data) {
+        melhor = { data: dataObj, cmv: clbsDoSku[clbId].cmv, clbId };
+      }
+    }
+    if (melhor) {
+      CMV_POR_SKU[sku] = { valor: melhor.cmv, data: melhor.data.toISOString(), origem: melhor.clbId };
+    }
+  }
+}
+
+function totalSku(sku){
+  const e = ESTOQUE[sku] || {};
+  return CANAIS.reduce((sum, c) => sum + (e[c.key] || 0), 0);
+}
+
+function renderResumo(ultimaData){
+  document.getElementById('s-total-skus').textContent = PRODUTOS.length;
+  const totalUnidades = PRODUTOS.reduce((sum, p) => sum + totalSku(p.sku), 0);
+  document.getElementById('s-total-unidades').textContent = totalUnidades.toLocaleString('pt-BR');
+  const semLancamento = PRODUTOS.filter(p => !ESTOQUE[p.sku]).length;
+  document.getElementById('s-sem-lancamento').textContent = semLancamento;
+  document.getElementById('s-ultima-att').textContent = ultimaData
+    ? new Date(ultimaData).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+    : 'Nenhuma ainda';
+}
+
+function render(){
+  const termo = document.getElementById('busca').value.trim().toLowerCase();
+  const mostrarZerados = document.getElementById('chk-mostrar-zerados').checked;
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  let filtrados = PRODUTOS.filter(p =>
+    !termo || p.sku.toLowerCase().includes(termo) || (p.nome||'').toLowerCase().includes(termo) || (p.marca||'').toLowerCase().includes(termo)
+  );
+  if (!mostrarZerados) {
+    filtrados = filtrados.filter(p => totalSku(p.sku) > 0);
+  }
+
+  document.getElementById('contagem').textContent = `${filtrados.length} de ${PRODUTOS.length} produtos`;
+  document.getElementById('empty').style.display = filtrados.length ? 'none' : 'block';
+
+  filtrados.forEach(p => {
+    const e = ESTOQUE[p.sku] || {};
+    const total = totalSku(p.sku);
+    const tr = document.createElement('tr');
+    tr.onclick = () => abrirModalEstoque(p.sku, p.nome);
+
+    let barHtml = '<span class="bar-empty">Sem lançamento</span>';
+    if (total > 0) {
+      barHtml = '<div class="bar">' + CANAIS.map(c => {
+        const v = e[c.key] || 0;
+        const pct = (v/total*100).toFixed(1);
+        return v > 0 ? `<div style="width:${pct}%; background:${c.color};" title="${c.label}: ${v}"></div>` : '';
+      }).join('') + '</div>';
+    }
+
+    const cmv = p.tipo === 'Importado' ? CMV_POR_SKU[p.sku] : CMV_NACIONAIS[p.sku];
+    let cmvHtml = '<span class="cmv-val sem">Sem registro</span>';
+    if (cmv && !isNaN(cmv.valor)) {
+      const dataFmt = new Date(cmv.data).toLocaleDateString('pt-BR');
+      const rotulo = p.tipo === 'Importado' ? `vigente desde ${dataFmt}` : `atualizado em ${dataFmt}`;
+      cmvHtml = `<span class="cmv-val">R$ ${cmv.valor.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</span><span class="cmv-asof">${rotulo}</span>`;
+    }
+
+    tr.innerHTML = `
+      <td class="sku">${p.sku}</td>
+      <td>${p.nome || '—'}</td>
+      <td class="muted">${p.marca || '—'}</td>
+      <td class="muted mono">${p.ncm || '—'}</td>
+      <td>${barHtml}</td>
+      <td class="total">${total.toLocaleString('pt-BR')}</td>
+      <td style="text-align:right;">${cmvHtml}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function abrirModalEstoque(sku, nome){
+  currentSku = sku;
+  document.getElementById('m-sku-label').textContent = `${sku} · ${nome || ''}`;
+  const e = ESTOQUE[sku] || {};
+  CANAIS.forEach(c => document.getElementById(c.field).value = e[c.key] ?? '');
+  document.getElementById('m-status').textContent = '';
+  document.getElementById('overlay-estoque').classList.add('open');
+}
+
+async function salvarEstoque(){
+  const btn = document.getElementById('btn-salvar-estoque');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  const statusEl = document.getElementById('m-status');
+
+  try {
+    for (const c of CANAIS) {
+      const raw = document.getElementById(c.field).value;
+      if (raw === '') continue;
+      const saldo = parseInt(raw, 10);
+      if (isNaN(saldo) || saldo < 0) continue;
+
+      const { error: e1 } = await sb.from('estoque_atual').upsert({
+        sku: currentSku, canal: c.key, saldo, atualizado_em: new Date().toISOString()
+      }, { onConflict: 'sku,canal' });
+      if (e1) throw e1;
+
+      const { error: e2 } = await sb.from('estoque_snapshots').insert({
+        sku: currentSku, canal: c.key, saldo
+      });
+      if (e2) throw e2;
+    }
+    statusEl.textContent = 'Salvo com sucesso.';
+    statusEl.className = 'status-msg ok';
+    await carregarTudo();
+    setTimeout(() => document.getElementById('overlay-estoque').classList.remove('open'), 500);
+    toast('Estoque atualizado');
+  } catch (err) {
+    statusEl.textContent = 'Erro: ' + err.message;
+    statusEl.className = 'status-msg err';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar estoque';
+  }
+}
+
+async function excluirProduto(){
+  if (!confirm(`Excluir o produto ${currentSku}? Ele deixa de aparecer no STOQ.BOX, mas o cadastro continua salvo no banco (pode ser reativado depois, se precisar).`)) return;
+
+  const btn = document.getElementById('btn-excluir-produto');
+  btn.disabled = true; btn.textContent = 'Excluindo…';
+
+  const { error } = await sb.from('produtos').update({ ativo: false }).eq('sku', currentSku);
+
+  btn.disabled = false; btn.textContent = 'Excluir produto';
+
+  if (error) {
+    toast('Erro ao excluir: ' + error.message);
+    return;
+  }
+  toast('Produto excluído');
+  document.getElementById('overlay-estoque').classList.remove('open');
+  await carregarTudo();
+}
+
+async function salvarProduto(){
+  const btn = document.getElementById('btn-salvar-produto');
+  const statusEl = document.getElementById('p-status');
+  const sku = document.getElementById('p-sku').value.trim();
+  const nome = document.getElementById('p-nome').value.trim();
+  const ncm = document.getElementById('p-ncm').value.trim();
+  const marca = document.getElementById('p-marca').value;
+
+  if (!sku || !nome) {
+    statusEl.textContent = 'SKU e nome são obrigatórios.';
+    statusEl.className = 'status-msg err';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  const { error } = await sb.from('produtos').insert({ sku, nome, ncm, marca });
+  btn.disabled = false; btn.textContent = 'Cadastrar';
+
+  if (error) {
+    statusEl.textContent = 'Erro: ' + error.message;
+    statusEl.className = 'status-msg err';
+    return;
+  }
+  statusEl.textContent = 'Produto cadastrado.';
+  statusEl.className = 'status-msg ok';
+  toast('Produto cadastrado');
+  document.getElementById('p-sku').value = '';
+  document.getElementById('p-nome').value = '';
+  document.getElementById('p-ncm').value = '';
+  await carregarTudo();
+  setTimeout(() => document.getElementById('overlay-produto').classList.remove('open'), 500);
+}
+
+// Eventos
+function exportarFechamento(){
+  const linhas = [];
+  linhas.push(['Cód Prod Emp', 'Sit.', 'CNPJ Terceiro', 'Quantidade', 'Valor Unitário', 'Valor Total', 'Descrição do Produto', '(NCM)', 'Unid Medida']);
+
+  PRODUTOS.forEach(p => {
+    const estoquesDoSku = ESTOQUE[p.sku] || {};
+    const cmvInfo = p.tipo === 'Importado' ? CMV_POR_SKU[p.sku] : CMV_NACIONAIS[p.sku];
+    const valorUnitario = (cmvInfo && !isNaN(cmvInfo.valor)) ? cmvInfo.valor : 0;
+
+    CANAIS.forEach(c => {
+      const quantidade = estoquesDoSku[c.key] || 0;
+      if (quantidade <= 0) return; // só exporta onde existe saldo naquele canal
+
+      const tipoCanal = ESTOQUE_TIPOS[c.key] || {};
+      const valorTotal = quantidade * valorUnitario;
+
+      linhas.push([
+        p.sku,
+        tipoCanal.situacao ?? '',
+        tipoCanal.cnpj ?? '',
+        quantidade,
+        Number(valorUnitario.toFixed(2)),
+        Number(valorTotal.toFixed(2)),
+        p.nome || '',
+        p.ncm || '',
+        p.unidade_medida || 'PC'
+      ]);
+    });
+  });
+
+  if (linhas.length === 1) {
+    toast('Nenhum produto com estoque lançado para exportar');
+    return;
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(linhas);
+  ws['!cols'] = [
+    {wch:14},{wch:6},{wch:18},{wch:12},{wch:14},{wch:14},{wch:40},{wch:12},{wch:10}
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Fechamento');
+
+  const dataSelecionada = document.getElementById('data-cmv').value || new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `fechamento-estoque-${dataSelecionada}.xlsx`);
+  toast('Planilha gerada');
+}
+
+document.getElementById('busca').addEventListener('input', render);
+document.getElementById('chk-mostrar-zerados').addEventListener('change', render);
+document.getElementById('data-cmv').addEventListener('change', () => { calcularCmvPorData(); render(); });
+document.getElementById('btn-cmv-hoje').addEventListener('click', () => {
+  document.getElementById('data-cmv').value = '';
+  calcularCmvPorData(); render();
+});
+document.getElementById('btn-refresh').addEventListener('click', carregarTudo);
+document.getElementById('btn-exportar').addEventListener('click', exportarFechamento);
+document.getElementById('btn-novo').addEventListener('click', () => {
+  document.getElementById('p-status').textContent = '';
+  document.getElementById('overlay-produto').classList.add('open');
+});
+document.getElementById('btn-salvar-estoque').addEventListener('click', salvarEstoque);
+document.getElementById('btn-excluir-produto').addEventListener('click', excluirProduto);
+document.getElementById('btn-salvar-produto').addEventListener('click', salvarProduto);
+document.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', (e) => {
+  e.target.closest('.overlay').classList.remove('open');
+}));
+document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click', (e) => {
+  if (e.target === ov) ov.classList.remove('open');
+}));
+document.getElementById('btn-pendentes').addEventListener('click', () => {
+  renderPendentes();
+  document.getElementById('overlay-pendentes').classList.add('open');
+});
+
+carregarTudo();
+carregarPendentes();
+</script>
+</body>
+</html>
