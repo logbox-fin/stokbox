@@ -865,6 +865,12 @@ async function sincronizarML(){
       headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }
     });
     const resultado = await resp.json();
+
+    if (resultado.diagnostico) {
+      alert('DIAGNÓSTICO ML:\n\nuserId: ' + resultado.userId + '\nStatus busca: ' + resultado.searchHttpStatus + '\n\nResposta:\n' + JSON.stringify(resultado.searchResposta, null, 2));
+      return;
+    }
+
     if (!resp.ok || resultado.ok === false) {
       alert('Erro na sincronização ML:\n' + (resultado.error || resp.status));
     } else {
