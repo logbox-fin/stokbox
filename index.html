@@ -867,7 +867,7 @@ async function sincronizarML(){
     const resultado = await resp.json();
 
     if (resultado.diagnostico) {
-      alert('DIAGNÓSTICO ML:\n\nuserId: ' + resultado.userId + '\nStatus busca: ' + resultado.searchHttpStatus + '\n\nResposta:\n' + JSON.stringify(resultado.searchResposta, null, 2));
+      alert('DIAGNÓSTICO ML:\n\n' + JSON.stringify(resultado, null, 2));
       return;
     }
 
