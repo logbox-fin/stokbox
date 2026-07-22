@@ -277,6 +277,7 @@
       </label>
       <button class="ghost" id="btn-sync-magis5">Sincronizar Magis5</button>
       <button class="ghost" id="btn-conectar-ml">Conectar Mercado Livre</button>
+      <button class="ghost" id="btn-sync-ml">Sincronizar Estoque ML</button>
       <div class="date-field">
         <span>CMV Contábil (Importados) em:</span>
         <input type="date" id="data-cmv">
@@ -855,7 +856,31 @@ async function verificarCallbackML(){
 }
 
 document.getElementById('btn-sync-magis5').addEventListener('click', sincronizarMagis5);
+async function sincronizarML(){
+  const btn = document.getElementById('btn-sync-ml');
+  btn.disabled = true; btn.textContent = 'Sincronizando…';
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/sync-ml-estoque`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }
+    });
+    const resultado = await resp.json();
+    if (!resp.ok || resultado.ok === false) {
+      alert('Erro na sincronização ML:\n' + (resultado.error || resp.status));
+    } else {
+      toast(`ML sincronizado: ${resultado.totalSincronizados} itens Full de ${resultado.totalItens} anúncios`);
+      if (resultado.erros && resultado.erros.length) console.log('Erros ML:', resultado.erros);
+      await carregarTudo();
+    }
+  } catch (err) {
+    toast('Erro na sincronização ML: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sincronizar Estoque ML';
+  }
+}
+
 document.getElementById('btn-conectar-ml').addEventListener('click', conectarMercadoLivre);
+document.getElementById('btn-sync-ml').addEventListener('click', sincronizarML);
 document.getElementById('btn-refresh').addEventListener('click', carregarTudo);
 document.getElementById('btn-exportar').addEventListener('click', exportarFechamento);
 document.getElementById('btn-novo').addEventListener('click', () => {
