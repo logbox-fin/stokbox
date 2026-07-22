@@ -120,6 +120,32 @@
   .cmv-val{ font-family:'JetBrains Mono',monospace; font-size:13px; }
   .cmv-val.sem{ color:var(--text-faint); font-family:'Inter',sans-serif; font-size:12px; }
   .cmv-asof{ font-size:10px; color:var(--text-faint); display:block; margin-top:2px; }
+
+  .tabs{ display:flex; gap:4px; padding:0 32px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .tab-btn{
+    border:none; background:none; border-radius:0; padding:12px 18px; font-size:13px; font-weight:600;
+    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-1px;
+  }
+  .tab-btn:hover{ color:var(--text); background:none; }
+  .tab-btn.active{ color:var(--accent); border-bottom-color:var(--accent); }
+
+  .integ-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:22px 24px; margin-bottom:16px; max-width:640px;
+  }
+  .integ-head{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .integ-head h2{ font-family:'Barlow Condensed',sans-serif; font-size:19px; text-transform:uppercase; letter-spacing:0.02em; }
+  .integ-status{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.03em; }
+  .integ-status.ok{ background:rgba(34,147,107,0.12); color:var(--ok); }
+  .integ-card p{ font-size:13px; color:var(--text-muted); line-height:1.5; margin-bottom:16px; }
+
+  .filtro-isolado{
+    display:flex; align-items:center; gap:10px; background:var(--accent-dim); border:1px solid var(--accent);
+    border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px;
+  }
+  .filtro-isolado button{ padding:5px 10px; font-size:12px; }
+  td.sku{ cursor:pointer; }
+  td.sku:hover{ text-decoration:underline; }
   #badge-pendentes{
     display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px;
     padding:0 5px; border-radius:20px; background:var(--danger); color:#fff; font-size:11px; font-weight:700;
@@ -236,7 +262,14 @@
   </div>
 </header>
 
+<nav class="tabs">
+  <button class="tab-btn active" id="tab-estoque" data-tab="estoque">Estoque</button>
+  <button class="tab-btn" id="tab-integracoes" data-tab="integracoes">Integrações</button>
+</nav>
+
 <main>
+
+<div id="view-estoque">
 
   <div class="summary">
     <div class="card">
@@ -275,9 +308,6 @@
         <input type="checkbox" id="chk-mostrar-zerados">
         Mostrar estoques zerados
       </label>
-      <button class="ghost" id="btn-sync-magis5">Sincronizar Magis5</button>
-      <button class="ghost" id="btn-conectar-ml">Conectar Mercado Livre</button>
-      <button class="ghost" id="btn-sync-ml">Sincronizar Estoque ML</button>
       <div class="date-field">
         <span>CMV Contábil (Importados) em:</span>
         <input type="date" id="data-cmv">
@@ -285,6 +315,11 @@
       </div>
     </div>
     <div class="label" id="contagem">—</div>
+  </div>
+
+  <div class="filtro-isolado" id="filtro-isolado" style="display:none;">
+    <span id="filtro-isolado-texto"></span>
+    <button class="ghost" id="btn-limpar-isolado">Mostrar todos</button>
   </div>
 
   <table>
@@ -306,6 +341,31 @@
     <div class="big">Nenhum produto encontrado</div>
     <div>Ajuste sua busca ou cadastre um novo SKU.</div>
   </div>
+
+</div>
+
+<div id="view-integracoes" style="display:none;">
+  <div class="integ-card">
+    <div class="integ-head">
+      <h2>Magis5 — Estoque próprio</h2>
+      <span class="integ-status ok">Conectado</span>
+    </div>
+    <p>Sincroniza o saldo do Depósito Padrão do Magis5 automaticamente a cada 15 minutos. Use o botão abaixo pra forçar uma atualização na hora, sem esperar o ciclo automático.</p>
+    <button class="primary" id="btn-sync-magis5">Sincronizar agora</button>
+  </div>
+
+  <div class="integ-card">
+    <div class="integ-head">
+      <h2>Mercado Livre — Full</h2>
+      <span class="integ-status ok">Conectado</span>
+    </div>
+    <p>Sincroniza o saldo do Full do Mercado Livre automaticamente a cada 15 minutos. Use "Conectar" se precisar reautorizar (ex: depois de mudar permissões no devcenter), e "Sincronizar agora" pra forçar uma atualização na hora.</p>
+    <div style="display:flex; gap:10px;">
+      <button class="ghost" id="btn-conectar-ml">Conectar / reconectar</button>
+      <button class="primary" id="btn-sync-ml">Sincronizar agora</button>
+    </div>
+  </div>
+</div>
 
 </main>
 
@@ -430,6 +490,7 @@ const CANAIS = [
 ];
 
 let PRODUTOS = [];
+let skuIsolado = null;
 let ESTOQUE = {}; // sku -> { canal: saldo }
 let CMV_HISTORICO = []; // linhas de historico_custos, campo = 'CMV Contábil'
 let CMV_LB_DATA = {}; // sku -> { clbId: { cmv, ... } } (Importados)
@@ -600,11 +661,20 @@ function render(){
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
 
-  let filtrados = PRODUTOS.filter(p =>
-    !termo || p.sku.toLowerCase().includes(termo) || (p.nome||'').toLowerCase().includes(termo) || (p.marca||'').toLowerCase().includes(termo)
-  );
-  if (!mostrarZerados) {
-    filtrados = filtrados.filter(p => totalSku(p.sku) > 0);
+  let filtrados;
+  if (skuIsolado) {
+    filtrados = PRODUTOS.filter(p => p.sku === skuIsolado);
+    document.getElementById('filtro-isolado').style.display = 'flex';
+    const pIsolado = PRODUTOS.find(p => p.sku === skuIsolado);
+    document.getElementById('filtro-isolado-texto').textContent = `Mostrando apenas: ${skuIsolado}${pIsolado ? ' — ' + pIsolado.nome : ''}`;
+  } else {
+    document.getElementById('filtro-isolado').style.display = 'none';
+    filtrados = PRODUTOS.filter(p =>
+      !termo || p.sku.toLowerCase().includes(termo) || (p.nome||'').toLowerCase().includes(termo) || (p.marca||'').toLowerCase().includes(termo)
+    );
+    if (!mostrarZerados) {
+      filtrados = filtrados.filter(p => totalSku(p.sku) > 0);
+    }
   }
 
   document.getElementById('contagem').textContent = `${filtrados.length} de ${PRODUTOS.length} produtos`;
@@ -633,8 +703,14 @@ function render(){
       cmvHtml = `<span class="cmv-val">R$ ${cmv.valor.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</span><span class="cmv-asof">${rotulo}</span>`;
     }
 
-    tr.innerHTML = `
-      <td class="sku">${p.sku}</td>
+    const tdSku = document.createElement('td');
+    tdSku.className = 'sku';
+    tdSku.textContent = p.sku;
+    tdSku.title = 'Clique para ver só este produto';
+    tdSku.onclick = (ev) => { ev.stopPropagation(); skuIsolado = p.sku; render(); };
+    tr.appendChild(tdSku);
+
+    const restoHtml = `
       <td>${p.nome || '—'}</td>
       <td class="muted">${p.marca || '—'}</td>
       <td class="muted mono">${p.ncm || '—'}</td>
@@ -642,6 +718,7 @@ function render(){
       <td class="total">${total.toLocaleString('pt-BR')}</td>
       <td style="text-align:right;">${cmvHtml}</td>
     `;
+    tr.insertAdjacentHTML('beforeend', restoHtml);
     tbody.appendChild(tr);
   });
 }
@@ -914,6 +991,17 @@ document.querySelectorAll('[data-close]').forEach(el => el.addEventListener('cli
 document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click', (e) => {
   if (e.target === ov) ov.classList.remove('open');
 }));
+document.getElementById('btn-limpar-isolado').addEventListener('click', () => { skuIsolado = null; render(); });
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-estoque').style.display = btn.dataset.tab === 'estoque' ? 'block' : 'none';
+    document.getElementById('view-integracoes').style.display = btn.dataset.tab === 'integracoes' ? 'block' : 'none';
+  });
+});
+
 document.getElementById('btn-pendentes').addEventListener('click', () => {
   renderPendentes();
   document.getElementById('overlay-pendentes').classList.add('open');
