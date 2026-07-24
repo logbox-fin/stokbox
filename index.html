@@ -144,6 +144,16 @@
     padding:9px 12px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif;
   }
   .canal-select:focus{ outline:none; border-color:var(--accent); }
+
+  .chips{ display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .chip{
+    display:flex; align-items:center; gap:8px; padding:10px 18px; border-radius:10px;
+    border:1px solid var(--border); cursor:pointer; font-size:13px; font-weight:600;
+    background:var(--surface); color:var(--text-muted); transition:all .15s ease; opacity:0.55;
+  }
+  .chip .dot{ width:9px; height:9px; border-radius:3px; }
+  .chip.active{ opacity:1; color:var(--text); border-color:transparent; }
+  .chip:hover{ opacity:0.85; }
   td.sku{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--accent); }
   td.muted{ color:var(--text-muted); font-size:13px; }
   td.total{ font-family:'JetBrains Mono',monospace; font-weight:600; font-size:15px; text-align:right; }
@@ -306,12 +316,9 @@
         <input type="checkbox" id="chk-mostrar-zerados">
         Mostrar estoques zerados
       </label>
-      <select class="canal-select" id="filtro-canal">
-        <option value="">Todos os canais</option>
-        <option value="magis5_proprio">Estoque Próprio (Magis5)</option>
-        <option value="mercado_livre_full">Full Mercado Livre</option>
-        <option value="shopee_full">Full Shopee</option>
-        <option value="amazon_full">Full Amazon</option>
+      <select class="canal-select" id="ordenar-por">
+        <option value="sku">Ordenar: SKU (A-Z)</option>
+        <option value="nome">Ordenar: Nome (A-Z)</option>
       </select>
       <div class="date-field">
         <span>CMV Contábil (Importados) em:</span>
@@ -321,6 +328,8 @@
     </div>
     <div class="label" id="contagem">—</div>
   </div>
+
+  <div class="chips" id="chips-canais"></div>
 
   <table>
     <thead>
@@ -490,6 +499,24 @@ const CANAIS = [
 ];
 
 let PRODUTOS = [];
+let canaisSelecionados = new Set(['magis5_proprio', 'mercado_livre_full', 'shopee_full', 'amazon_full']);
+
+function renderChips(){
+  const wrap = document.getElementById('chips-canais');
+  wrap.innerHTML = '';
+  CANAIS.forEach(c => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (canaisSelecionados.has(c.key) ? ' active' : '');
+    chip.innerHTML = `<span class="dot" style="background:${c.color}"></span> ${c.label}`;
+    chip.onclick = () => {
+      if (canaisSelecionados.has(c.key)) canaisSelecionados.delete(c.key);
+      else canaisSelecionados.add(c.key);
+      renderChips();
+      render();
+    };
+    wrap.appendChild(chip);
+  });
+}
 let ESTOQUE = {}; // sku -> { canal: saldo }
 let CMV_HISTORICO = []; // linhas de historico_custos, campo = 'CMV Contábil'
 let CMV_LB_DATA = {}; // sku -> { clbId: { cmv, ... } } (Importados)
@@ -657,7 +684,7 @@ function renderResumo(ultimaData){
 function render(){
   const termo = document.getElementById('busca').value.trim().toLowerCase();
   const mostrarZerados = document.getElementById('chk-mostrar-zerados').checked;
-  const canalFiltro = document.getElementById('filtro-canal').value; // '' = todos os canais
+  const ordenarPor = document.getElementById('ordenar-por').value;
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
 
@@ -665,33 +692,35 @@ function render(){
     !termo || p.sku.toLowerCase().includes(termo) || (p.nome||'').toLowerCase().includes(termo) || (p.marca||'').toLowerCase().includes(termo)
   );
 
-  // valor a considerar pra cada produto: total geral, ou só o canal selecionado
-  const valorConsiderado = (p) => canalFiltro ? ((ESTOQUE[p.sku] || {})[canalFiltro] || 0) : totalSku(p.sku);
+  // valor a considerar pra cada produto: soma só dos canais marcados nos chips
+  const valorConsiderado = (p) => {
+    const e = ESTOQUE[p.sku] || {};
+    return CANAIS.reduce((soma, c) => soma + (canaisSelecionados.has(c.key) ? (e[c.key] || 0) : 0), 0);
+  };
 
   if (!mostrarZerados) {
     filtrados = filtrados.filter(p => valorConsiderado(p) > 0);
   }
+
+  filtrados.sort((a, b) => {
+    if (ordenarPor === 'nome') return (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
+    return a.sku.localeCompare(b.sku, 'pt-BR');
+  });
 
   document.getElementById('contagem').textContent = `${filtrados.length} de ${PRODUTOS.length} produtos`;
   document.getElementById('empty').style.display = filtrados.length ? 'none' : 'block';
 
   filtrados.forEach(p => {
     const e = ESTOQUE[p.sku] || {};
-    const total = totalSku(p.sku);
-    const valorExibido = canalFiltro ? (e[canalFiltro] || 0) : total;
+    const valorExibido = valorConsiderado(p);
     const tr = document.createElement('tr');
     tr.onclick = () => abrirModalEstoque(p.sku, p.nome);
 
     let barHtml = '<span class="bar-empty">Sem lançamento</span>';
-    if (canalFiltro) {
-      const canalInfo = CANAIS.find(c => c.key === canalFiltro);
-      if (valorExibido > 0) {
-        barHtml = `<div class="bar"><div style="width:100%; background:${canalInfo.color};" title="${canalInfo.label}: ${valorExibido}"></div></div>`;
-      }
-    } else if (total > 0) {
-      barHtml = '<div class="bar">' + CANAIS.map(c => {
+    if (valorExibido > 0) {
+      barHtml = '<div class="bar">' + CANAIS.filter(c => canaisSelecionados.has(c.key)).map(c => {
         const v = e[c.key] || 0;
-        const pct = (v/total*100).toFixed(1);
+        const pct = (v/valorExibido*100).toFixed(1);
         return v > 0 ? `<div style="width:${pct}%; background:${c.color};" title="${c.label}: ${v}"></div>` : '';
       }).join('') + '</div>';
     }
@@ -985,7 +1014,7 @@ document.querySelectorAll('[data-close]').forEach(el => el.addEventListener('cli
 document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click', (e) => {
   if (e.target === ov) ov.classList.remove('open');
 }));
-document.getElementById('filtro-canal').addEventListener('change', render);
+document.getElementById('ordenar-por').addEventListener('change', render);
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1004,6 +1033,7 @@ document.getElementById('btn-pendentes').addEventListener('click', () => {
 carregarTudo();
 carregarPendentes();
 verificarCallbackML();
+renderChips();
 </script>
 </body>
 </html>
