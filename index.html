@@ -139,13 +139,14 @@
   .integ-status.ok{ background:rgba(34,147,107,0.12); color:var(--ok); }
   .integ-card p{ font-size:13px; color:var(--text-muted); line-height:1.5; margin-bottom:16px; }
 
-  .filtro-isolado{
-    display:flex; align-items:center; gap:10px; background:var(--accent-dim); border:1px solid var(--accent);
-    border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px;
+  .canal-select{
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:9px 12px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif;
   }
-  .filtro-isolado button{ padding:5px 10px; font-size:12px; }
-  td.sku{ cursor:pointer; }
-  td.sku:hover{ text-decoration:underline; }
+  .canal-select:focus{ outline:none; border-color:var(--accent); }
+  td.sku{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--accent); }
+  td.muted{ color:var(--text-muted); font-size:13px; }
+  td.total{ font-family:'JetBrains Mono',monospace; font-weight:600; font-size:15px; text-align:right; }
   #badge-pendentes{
     display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px;
     padding:0 5px; border-radius:20px; background:var(--danger); color:#fff; font-size:11px; font-weight:700;
@@ -173,9 +174,6 @@
   tbody tr:last-child{ border-bottom:none; }
   tbody tr:hover{ background:var(--surface-2); }
   td{ padding:13px 16px; font-size:14px; vertical-align:middle; }
-  td.sku{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--accent); }
-  td.muted{ color:var(--text-muted); font-size:13px; }
-  td.total{ font-family:'JetBrains Mono',monospace; font-weight:600; font-size:15px; text-align:right; }
 
   .bar{
     display:flex; height:8px; width:160px; border-radius:4px; overflow:hidden; background:var(--surface-3);
@@ -308,6 +306,13 @@
         <input type="checkbox" id="chk-mostrar-zerados">
         Mostrar estoques zerados
       </label>
+      <select class="canal-select" id="filtro-canal">
+        <option value="">Todos os canais</option>
+        <option value="magis5_proprio">Estoque Próprio (Magis5)</option>
+        <option value="mercado_livre_full">Full Mercado Livre</option>
+        <option value="shopee_full">Full Shopee</option>
+        <option value="amazon_full">Full Amazon</option>
+      </select>
       <div class="date-field">
         <span>CMV Contábil (Importados) em:</span>
         <input type="date" id="data-cmv">
@@ -315,11 +320,6 @@
       </div>
     </div>
     <div class="label" id="contagem">—</div>
-  </div>
-
-  <div class="filtro-isolado" id="filtro-isolado" style="display:none;">
-    <span id="filtro-isolado-texto"></span>
-    <button class="ghost" id="btn-limpar-isolado">Mostrar todos</button>
   </div>
 
   <table>
@@ -490,7 +490,6 @@ const CANAIS = [
 ];
 
 let PRODUTOS = [];
-let skuIsolado = null;
 let ESTOQUE = {}; // sku -> { canal: saldo }
 let CMV_HISTORICO = []; // linhas de historico_custos, campo = 'CMV Contábil'
 let CMV_LB_DATA = {}; // sku -> { clbId: { cmv, ... } } (Importados)
@@ -658,23 +657,19 @@ function renderResumo(ultimaData){
 function render(){
   const termo = document.getElementById('busca').value.trim().toLowerCase();
   const mostrarZerados = document.getElementById('chk-mostrar-zerados').checked;
+  const canalFiltro = document.getElementById('filtro-canal').value; // '' = todos os canais
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
 
-  let filtrados;
-  if (skuIsolado) {
-    filtrados = PRODUTOS.filter(p => p.sku === skuIsolado);
-    document.getElementById('filtro-isolado').style.display = 'flex';
-    const pIsolado = PRODUTOS.find(p => p.sku === skuIsolado);
-    document.getElementById('filtro-isolado-texto').textContent = `Mostrando apenas: ${skuIsolado}${pIsolado ? ' — ' + pIsolado.nome : ''}`;
-  } else {
-    document.getElementById('filtro-isolado').style.display = 'none';
-    filtrados = PRODUTOS.filter(p =>
-      !termo || p.sku.toLowerCase().includes(termo) || (p.nome||'').toLowerCase().includes(termo) || (p.marca||'').toLowerCase().includes(termo)
-    );
-    if (!mostrarZerados) {
-      filtrados = filtrados.filter(p => totalSku(p.sku) > 0);
-    }
+  let filtrados = PRODUTOS.filter(p =>
+    !termo || p.sku.toLowerCase().includes(termo) || (p.nome||'').toLowerCase().includes(termo) || (p.marca||'').toLowerCase().includes(termo)
+  );
+
+  // valor a considerar pra cada produto: total geral, ou só o canal selecionado
+  const valorConsiderado = (p) => canalFiltro ? ((ESTOQUE[p.sku] || {})[canalFiltro] || 0) : totalSku(p.sku);
+
+  if (!mostrarZerados) {
+    filtrados = filtrados.filter(p => valorConsiderado(p) > 0);
   }
 
   document.getElementById('contagem').textContent = `${filtrados.length} de ${PRODUTOS.length} produtos`;
@@ -683,11 +678,17 @@ function render(){
   filtrados.forEach(p => {
     const e = ESTOQUE[p.sku] || {};
     const total = totalSku(p.sku);
+    const valorExibido = canalFiltro ? (e[canalFiltro] || 0) : total;
     const tr = document.createElement('tr');
     tr.onclick = () => abrirModalEstoque(p.sku, p.nome);
 
     let barHtml = '<span class="bar-empty">Sem lançamento</span>';
-    if (total > 0) {
+    if (canalFiltro) {
+      const canalInfo = CANAIS.find(c => c.key === canalFiltro);
+      if (valorExibido > 0) {
+        barHtml = `<div class="bar"><div style="width:100%; background:${canalInfo.color};" title="${canalInfo.label}: ${valorExibido}"></div></div>`;
+      }
+    } else if (total > 0) {
       barHtml = '<div class="bar">' + CANAIS.map(c => {
         const v = e[c.key] || 0;
         const pct = (v/total*100).toFixed(1);
@@ -703,22 +704,15 @@ function render(){
       cmvHtml = `<span class="cmv-val">R$ ${cmv.valor.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</span><span class="cmv-asof">${rotulo}</span>`;
     }
 
-    const tdSku = document.createElement('td');
-    tdSku.className = 'sku';
-    tdSku.textContent = p.sku;
-    tdSku.title = 'Clique para ver só este produto';
-    tdSku.onclick = (ev) => { ev.stopPropagation(); skuIsolado = p.sku; render(); };
-    tr.appendChild(tdSku);
-
-    const restoHtml = `
+    tr.innerHTML = `
+      <td class="sku">${p.sku}</td>
       <td>${p.nome || '—'}</td>
       <td class="muted">${p.marca || '—'}</td>
       <td class="muted mono">${p.ncm || '—'}</td>
       <td>${barHtml}</td>
-      <td class="total">${total.toLocaleString('pt-BR')}</td>
+      <td class="total">${valorExibido.toLocaleString('pt-BR')}</td>
       <td style="text-align:right;">${cmvHtml}</td>
     `;
-    tr.insertAdjacentHTML('beforeend', restoHtml);
     tbody.appendChild(tr);
   });
 }
@@ -991,7 +985,7 @@ document.querySelectorAll('[data-close]').forEach(el => el.addEventListener('cli
 document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click', (e) => {
   if (e.target === ov) ov.classList.remove('open');
 }));
-document.getElementById('btn-limpar-isolado').addEventListener('click', () => { skuIsolado = null; render(); });
+document.getElementById('filtro-canal').addEventListener('change', render);
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
