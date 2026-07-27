@@ -1018,7 +1018,7 @@ async function conectarShopee(){
     if (data.url) {
       window.location.href = data.url;
     } else {
-      toast('Erro ao montar link de autorização da Shopee');
+      alert('Erro ao montar link de autorização da Shopee:\n' + JSON.stringify(data, null, 2));
     }
   } catch (err) {
     toast('Erro: ' + err.message);
