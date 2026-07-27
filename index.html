@@ -135,7 +135,7 @@
   }
   .integ-head{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }
   .integ-head h2{ font-family:'Barlow Condensed',sans-serif; font-size:19px; text-transform:uppercase; letter-spacing:0.02em; }
-  .integ-status{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.03em; }
+  .integ-status{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.03em; background:var(--surface-3); color:var(--text-faint); }
   .integ-status.ok{ background:rgba(34,147,107,0.12); color:var(--ok); }
   .integ-card p{ font-size:13px; color:var(--text-muted); line-height:1.5; margin-bottom:16px; }
 
@@ -372,6 +372,18 @@
     <div style="display:flex; gap:10px;">
       <button class="ghost" id="btn-conectar-ml">Conectar / reconectar</button>
       <button class="primary" id="btn-sync-ml">Sincronizar agora</button>
+    </div>
+  </div>
+
+  <div class="integ-card">
+    <div class="integ-head">
+      <h2>Shopee — Full</h2>
+      <span class="integ-status" id="shopee-status">Não conectado</span>
+    </div>
+    <p>Sincroniza o saldo do Full da Shopee. Clique em "Conectar" para autorizar sua loja.</p>
+    <div style="display:flex; gap:10px;">
+      <button class="ghost" id="btn-conectar-shopee">Conectar Shopee</button>
+      <button class="primary" id="btn-sync-shopee">Sincronizar agora</button>
     </div>
   </div>
 </div>
@@ -997,6 +1009,79 @@ async function sincronizarML(){
   }
 }
 
+async function conectarShopee(){
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/shopee-auth-url`, {
+      headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    const data = await resp.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      toast('Erro ao montar link de autorização da Shopee');
+    }
+  } catch (err) {
+    toast('Erro: ' + err.message);
+  }
+}
+
+async function verificarCallbackShopee(){
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const shopId = params.get('shop_id');
+  if (!code || !shopId) return;
+
+  toast('Finalizando conexão com a Shopee…');
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/shopee-oauth-exchange`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, shopId })
+    });
+    const resultado = await resp.json();
+    if (resultado.ok) {
+      toast('Shopee conectada com sucesso!');
+      document.getElementById('shopee-status').textContent = 'Conectado';
+      document.getElementById('shopee-status').classList.add('ok');
+    } else {
+      toast('Erro ao conectar Shopee: ' + JSON.stringify(resultado.error));
+    }
+  } catch (err) {
+    toast('Erro ao conectar Shopee: ' + err.message);
+  } finally {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+
+async function sincronizarShopee(){
+  const btn = document.getElementById('btn-sync-shopee');
+  btn.disabled = true; btn.textContent = 'Sincronizando…';
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/sync-shopee-estoque`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }
+    });
+    const resultado = await resp.json();
+    if (resultado.diagnostico) {
+      alert('DIAGNÓSTICO SHOPEE:\n\n' + JSON.stringify(resultado, null, 2));
+      return;
+    }
+    if (!resp.ok || resultado.ok === false) {
+      alert('Erro na sincronização Shopee:\n' + JSON.stringify(resultado.error || resp.status));
+    } else {
+      toast(`Shopee sincronizado: ${resultado.totalSincronizados} itens Full de ${resultado.totalItens} anúncios`);
+      await carregarTudo();
+    }
+  } catch (err) {
+    toast('Erro na sincronização Shopee: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sincronizar agora';
+  }
+}
+
+document.getElementById('btn-conectar-shopee').addEventListener('click', conectarShopee);
+document.getElementById('btn-sync-shopee').addEventListener('click', sincronizarShopee);
+
 document.getElementById('btn-conectar-ml').addEventListener('click', conectarMercadoLivre);
 document.getElementById('btn-sync-ml').addEventListener('click', sincronizarML);
 document.getElementById('btn-refresh').addEventListener('click', carregarTudo);
@@ -1033,6 +1118,7 @@ document.getElementById('btn-pendentes').addEventListener('click', () => {
 carregarTudo();
 carregarPendentes();
 verificarCallbackML();
+verificarCallbackShopee();
 renderChips();
 </script>
 </body>
