@@ -1045,7 +1045,7 @@ async function verificarCallbackShopee(){
       document.getElementById('shopee-status').textContent = 'Conectado';
       document.getElementById('shopee-status').classList.add('ok');
     } else {
-      toast('Erro ao conectar Shopee: ' + JSON.stringify(resultado.error));
+      alert('Erro ao conectar Shopee:\n' + JSON.stringify(resultado, null, 2));
     }
   } catch (err) {
     toast('Erro ao conectar Shopee: ' + err.message);
