@@ -956,7 +956,8 @@ async function conectarMercadoLivre(){
 async function verificarCallbackML(){
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
-  if (!code) return;
+  const shopId = params.get('shop_id');
+  if (!code || shopId) return; // shop_id só existe no retorno da Shopee, não do ML
 
   toast('Finalizando conexão com o Mercado Livre…');
   try {
