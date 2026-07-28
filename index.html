@@ -173,6 +173,11 @@
     background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px; color:var(--text); max-width:180px;
   }
   .pend-actions button{ padding:6px 10px; font-size:12px; }
+  .fator-label{ font-size:11px; color:var(--text-faint); white-space:nowrap; }
+  .fator-input{
+    width:50px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px;
+    padding:5px 6px; color:var(--text); font-size:12px; font-family:'JetBrains Mono',monospace;
+  }
   .pend-sugestao{
     margin-top:8px; padding:8px 10px; background:var(--accent-dim); border:1px solid var(--accent);
     border-radius:8px; font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;
@@ -628,6 +633,8 @@ function renderPendentes(){
       </div>
       <div class="pend-actions">
         <select data-sku-id="${pend.id}"><option value="">Vincular a…</option>${opcoesProdutos}</select>
+        <span class="fator-label">1 un. =</span>
+        <input type="number" class="fator-input" data-fator-id="${pend.id}" value="1" min="0.01" step="0.01" title="Quantas unidades do produto vinculado 1 unidade deste SKU representa">
         <button data-vincular="${pend.id}">Vincular</button>
         <button data-ignorar="${pend.id}">Ignorar</button>
       </div>
@@ -636,7 +643,8 @@ function renderPendentes(){
   });
 
   wrap.querySelectorAll('[data-sug-sim]').forEach(btn => btn.addEventListener('click', () => {
-    resolverPendente(btn.dataset.sugSim, 'vinculado', btn.dataset.sugSku);
+    const fatorInput = wrap.querySelector(`input[data-fator-id="${btn.dataset.sugSim}"]`);
+    resolverPendente(btn.dataset.sugSim, 'vinculado', btn.dataset.sugSku, fatorInput ? fatorInput.value : 1);
   }));
   wrap.querySelectorAll('[data-sug-nao]').forEach(btn => btn.addEventListener('click', (e) => {
     e.target.closest('.pend-sugestao').style.display = 'none';
@@ -644,15 +652,17 @@ function renderPendentes(){
   wrap.querySelectorAll('[data-ignorar]').forEach(btn => btn.addEventListener('click', () => resolverPendente(btn.dataset.ignorar, 'ignorado')));
   wrap.querySelectorAll('[data-vincular]').forEach(btn => btn.addEventListener('click', () => {
     const select = wrap.querySelector(`select[data-sku-id="${btn.dataset.vincular}"]`);
+    const fatorInput = wrap.querySelector(`input[data-fator-id="${btn.dataset.vincular}"]`);
     const skuAlvo = select.value;
     if (!skuAlvo) { toast('Escolha um produto para vincular'); return; }
-    resolverPendente(btn.dataset.vincular, 'vinculado', skuAlvo);
+    resolverPendente(btn.dataset.vincular, 'vinculado', skuAlvo, fatorInput ? fatorInput.value : 1);
   }));
 }
 
-async function resolverPendente(id, status, vinculadoASku){
+async function resolverPendente(id, status, vinculadoASku, fatorConversao){
+  const fator = fatorConversao && !isNaN(fatorConversao) ? Number(fatorConversao) : 1;
   const payload = { status, resolvido_em: new Date().toISOString() };
-  if (vinculadoASku) payload.vinculado_a_sku = vinculadoASku;
+  if (vinculadoASku) { payload.vinculado_a_sku = vinculadoASku; payload.fator_conversao = fator; }
 
   // Busca os dados do pendente antes de resolver, pra já gravar o estoque se for vínculo
   const pendente = PENDENTES.find(p => p.id === id);
@@ -661,10 +671,16 @@ async function resolverPendente(id, status, vinculadoASku){
   if (error) { toast('Erro: ' + error.message); return; }
 
   if (status === 'vinculado' && pendente) {
+    // soma ao que j\u00e1 existir pro produto/canal de destino, em vez de sobrescrever
+    // (o produto m\u00e3e pode j\u00e1 ter estoque pr\u00f3prio reportado nesse mesmo canal)
+    const { data: atual } = await sb.from('estoque_atual').select('saldo').eq('sku', vinculadoASku).eq('canal', pendente.canal).maybeSingle();
+    const saldoConvertido = Math.round(pendente.saldo * fator);
+    const novoSaldo = (atual?.saldo || 0) + saldoConvertido;
+
     await sb.from('estoque_atual').upsert({
-      sku: vinculadoASku, canal: pendente.canal, saldo: pendente.saldo, atualizado_em: new Date().toISOString()
+      sku: vinculadoASku, canal: pendente.canal, saldo: novoSaldo, atualizado_em: new Date().toISOString()
     }, { onConflict: 'sku,canal' });
-    await sb.from('estoque_snapshots').insert({ sku: vinculadoASku, canal: pendente.canal, saldo: pendente.saldo });
+    await sb.from('estoque_snapshots').insert({ sku: vinculadoASku, canal: pendente.canal, saldo: novoSaldo });
   }
 
   toast(status === 'ignorado' ? 'SKU ignorado' : 'SKU vinculado e estoque atualizado');
