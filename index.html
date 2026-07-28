@@ -173,6 +173,12 @@
     background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px; color:var(--text); max-width:180px;
   }
   .pend-actions button{ padding:6px 10px; font-size:12px; }
+  .pend-sugestao{
+    margin-top:8px; padding:8px 10px; background:var(--accent-dim); border:1px solid var(--accent);
+    border-radius:8px; font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  }
+  .pend-sugestao button{ padding:4px 10px; font-size:11px; border-radius:6px; border:1px solid var(--border); background:var(--surface); }
+  .pend-sugestao button.mini-sim{ background:var(--ok); color:#fff; border-color:var(--ok); }
 
   table{ width:100%; border-collapse:collapse; background:var(--surface); border-radius:var(--radius); overflow:hidden; border:1px solid var(--border); }
   thead th{
@@ -554,6 +560,49 @@ async function carregarPendentes(){
   document.getElementById('badge-pendentes').textContent = PENDENTES.length > 0 ? PENDENTES.length : '';
 }
 
+function distanciaLevenshtein(a, b){
+  const m = a.length, n = b.length;
+  const d = Array.from({length: m+1}, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++){
+    for (let j = 1; j <= n; j++){
+      d[i][j] = a[i-1] === b[j-1] ? d[i-1][j-1] : 1 + Math.min(d[i-1][j], d[i][j-1], d[i-1][j-1]);
+    }
+  }
+  return d[m][n];
+}
+
+function normalizarParaComparar(s){
+  return (s || '').toUpperCase().replace(/[-\s]/g, '');
+}
+
+function similaridadeTexto(a, b){
+  const wa = new Set((a || '').toLowerCase().split(/\W+/).filter(Boolean));
+  const wb = new Set((b || '').toLowerCase().split(/\W+/).filter(Boolean));
+  if (!wa.size || !wb.size) return 0;
+  let comuns = 0;
+  wa.forEach(w => { if (wb.has(w)) comuns++; });
+  return comuns / Math.max(wa.size, wb.size);
+}
+
+function sugerirProduto(pend){
+  const skuNorm = normalizarParaComparar(pend.sku);
+  let melhor = null;
+  let melhorScore = 0;
+
+  PRODUTOS.forEach(p => {
+    const pNorm = normalizarParaComparar(p.sku);
+    const dist = distanciaLevenshtein(skuNorm, pNorm);
+    const maxLen = Math.max(skuNorm.length, pNorm.length) || 1;
+    const scoreSku = 1 - (dist / maxLen); // 1 = idêntico, 0 = nada a ver
+    const scoreNome = similaridadeTexto(pend.nome_recebido, p.nome);
+    const scoreFinal = (scoreSku * 0.6) + (scoreNome * 0.4);
+    if (scoreFinal > melhorScore) { melhorScore = scoreFinal; melhor = p; }
+  });
+
+  return melhorScore >= 0.5 ? melhor : null;
+}
+
 function renderPendentes(){
   const wrap = document.getElementById('lista-pendentes');
   wrap.innerHTML = '';
@@ -562,12 +611,20 @@ function renderPendentes(){
   const opcoesProdutos = PRODUTOS.map(p => `<option value="${p.sku}">${p.sku} — ${p.nome || ''}</option>`).join('');
 
   PENDENTES.forEach(pend => {
+    const sugestao = sugerirProduto(pend);
     const row = document.createElement('div');
     row.className = 'pend-row';
     row.innerHTML = `
       <div class="pend-info">
         <div class="pend-sku">${pend.sku}</div>
         <div class="pend-meta">${pend.canal} · ${pend.nome_recebido || 'sem nome'} · saldo ${pend.saldo ?? '—'}</div>
+        ${sugestao ? `
+          <div class="pend-sugestao">
+            Parece ser <strong>${sugestao.sku}</strong> — ${sugestao.nome || ''}?
+            <button class="mini-sim" data-sug-sim="${pend.id}" data-sug-sku="${sugestao.sku}">Sim, vincular</button>
+            <button class="mini-nao" data-sug-nao="${pend.id}">Não</button>
+          </div>
+        ` : ''}
       </div>
       <div class="pend-actions">
         <select data-sku-id="${pend.id}"><option value="">Vincular a…</option>${opcoesProdutos}</select>
@@ -578,6 +635,12 @@ function renderPendentes(){
     wrap.appendChild(row);
   });
 
+  wrap.querySelectorAll('[data-sug-sim]').forEach(btn => btn.addEventListener('click', () => {
+    resolverPendente(btn.dataset.sugSim, 'vinculado', btn.dataset.sugSku);
+  }));
+  wrap.querySelectorAll('[data-sug-nao]').forEach(btn => btn.addEventListener('click', (e) => {
+    e.target.closest('.pend-sugestao').style.display = 'none';
+  }));
   wrap.querySelectorAll('[data-ignorar]').forEach(btn => btn.addEventListener('click', () => resolverPendente(btn.dataset.ignorar, 'ignorado')));
   wrap.querySelectorAll('[data-vincular]').forEach(btn => btn.addEventListener('click', () => {
     const select = wrap.querySelector(`select[data-sku-id="${btn.dataset.vincular}"]`);
