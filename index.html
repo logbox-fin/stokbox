@@ -209,6 +209,37 @@
   .badge.ok{ background:rgba(94,200,160,0.12); color:var(--ok); }
   .badge.danger{ background:rgba(232,96,76,0.12); color:var(--danger); }
 
+  .ef-meses-nav{ display:flex; align-items:center; justify-content:center; gap:18px; margin-bottom:18px; }
+  #ef-periodo-label{ font-size:15px; min-width:160px; text-align:center; }
+
+  .ef-alertas{ background:rgba(199,68,46,0.08); border:1px solid var(--danger); border-radius:var(--radius); padding:16px 18px; margin-bottom:18px; }
+  .ef-alertas-head{ font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:0.02em; color:var(--danger); text-transform:uppercase; font-size:13px; margin-bottom:8px; }
+  .ef-alerta-item{ font-size:13px; color:var(--text); padding:4px 0; }
+  .ef-alerta-item .mono{ color:var(--danger); font-weight:600; }
+
+  #ef-tabela th, #ef-tabela td{ text-align:right; }
+  #ef-tabela th.sku-col, #ef-tabela td.sku-col{ text-align:left; }
+  #ef-tabela thead tr.ef-grupo-header th{ background:var(--surface-3); border-bottom:1px solid var(--border); }
+  #ef-tabela td.ef-final{ font-weight:700; font-family:'JetBrains Mono',monospace; }
+  #ef-tabela td.ef-final.danger{ color:var(--danger); }
+  .ef-media-input{
+    width:64px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px;
+    padding:5px 6px; color:var(--text); font-size:12px; font-family:'JetBrains Mono',monospace; text-align:right;
+  }
+  .ef-media-input:focus{ outline:none; border-color:var(--accent); }
+
+  .ef-grupo-linha{ display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surface-2); border-radius:8px; margin-bottom:6px; font-size:13px; }
+  .ef-grupo-linha button{ padding:4px 10px; font-size:11px; }
+  .ef-lote-item-row{ display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surface-2); border-radius:8px; margin-bottom:6px; font-size:13px; }
+  .ef-lote-item-row button{ padding:4px 10px; font-size:11px; }
+
+  .ef-fechar-linha{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; background:var(--surface-2); border-radius:8px; margin-bottom:6px; font-size:13px; }
+  .ef-fechar-linha input{
+    width:100px; background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    padding:6px 8px; color:var(--text); font-size:13px; font-family:'JetBrains Mono',monospace; text-align:right;
+  }
+  .ef-lock{ font-size:11px; color:var(--ok); margin-left:4px; }
+
   .empty-state{ text-align:center; padding:60px 20px; color:var(--text-muted); }
   .empty-state .big{ font-family:'Barlow Condensed',sans-serif; font-size:22px; color:var(--text); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em; }
 
@@ -282,8 +313,9 @@
 </header>
 
 <nav class="tabs">
-  <button class="tab-btn active" id="tab-estoque" data-tab="estoque">Estoque</button>
   <button class="tab-btn" id="tab-integracoes" data-tab="integracoes">Integrações</button>
+  <button class="tab-btn active" id="tab-estoque" data-tab="estoque">Estoque</button>
+  <button class="tab-btn" id="tab-estoque-futuro" data-tab="estoque-futuro">Estoque Futuro</button>
 </nav>
 
 <main>
@@ -399,6 +431,46 @@
   </div>
 </div>
 
+<div id="view-estoque-futuro" style="display:none;">
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="chips" id="chips-ef-grupos" style="margin-bottom:0;"></div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="ghost" id="btn-ef-gerenciar-produtos">Gerenciar produtos MTI/BNK</button>
+      <button class="ghost" id="btn-ef-fechar-mes">Fechar mês</button>
+      <button class="primary" id="btn-ef-novo-lote">+ Novo lote de entrada</button>
+    </div>
+  </div>
+
+  <div class="ef-meses-nav">
+    <button class="ghost" id="btn-ef-mes-anterior">‹ Mês anterior</button>
+    <div class="label" id="ef-periodo-label">—</div>
+    <button class="ghost" id="btn-ef-mes-proximo">Próximo mês ›</button>
+  </div>
+
+  <div id="ef-alertas-wrap" style="display:none;">
+    <div class="ef-alertas">
+      <div class="ef-alertas-head">⚠ Alertas de ruptura de estoque</div>
+      <div id="ef-alertas-lista"></div>
+    </div>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table id="ef-tabela">
+      <thead id="ef-thead"></thead>
+      <tbody id="ef-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="empty-state" id="ef-empty" style="display:none;">
+    <div class="big">Nenhum produto nos estoques selecionados</div>
+    <div>Marque um chip acima ou adicione produtos a MTI/BNK.</div>
+  </div>
+
+</div>
+
 </main>
 
 <!-- Modal: editar estoque de um produto -->
@@ -480,6 +552,98 @@
     <div class="modal-foot">
       <button class="ghost" data-close>Cancelar</button>
       <button class="primary" id="btn-salvar-produto">Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: gerenciar produtos MTI/BNK -->
+<div class="overlay" id="overlay-ef-grupos">
+  <div class="modal" style="max-width:640px; width:95vw;">
+    <div class="modal-head">
+      <h2>Produtos MTI / BNK</h2>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint" style="margin-top:0;">O estoque LogBox é automático (todo produto Importado entra sozinho). MTI e BNK só calculam os produtos Nacionais que você adicionar aqui.</p>
+      <div class="field-row">
+        <div class="field" style="flex:1;">
+          <label>Adicionar produto Nacional a</label>
+          <select id="ef-add-grupo">
+            <option value="mti">Estoque MTI</option>
+            <option value="bnk">Estoque BNK</option>
+          </select>
+        </div>
+        <div class="field" style="flex:2;">
+          <label>Produto</label>
+          <select id="ef-add-sku"></select>
+        </div>
+      </div>
+      <button class="primary" id="btn-ef-add-produto" style="margin-bottom:18px;">Adicionar</button>
+      <div class="label" style="margin-bottom:8px;">Estoque MTI</div>
+      <div id="ef-lista-mti" style="margin-bottom:18px;"></div>
+      <div class="label" style="margin-bottom:8px;">Estoque BNK</div>
+      <div id="ef-lista-bnk"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="ghost" data-close>Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: fechar mês -->
+<div class="overlay" id="overlay-ef-fechar-mes">
+  <div class="modal" style="max-width:640px; width:95vw;">
+    <div class="modal-head">
+      <h2>Fechar mês</h2>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint" style="margin-top:0;">Mês a encerrar: <b id="ef-fechar-mes-label">—</b>. Informe o estoque real final de cada produto — esse valor trava o Final deste mês e passa a ser o Inicial do mês seguinte, mesmo que a média de vendas ou os lotes desse mês mudem depois.</p>
+      <div id="ef-fechar-lista"></div>
+      <div class="status-msg" id="ef-fechar-status"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="ghost" data-close>Cancelar</button>
+      <button class="primary" id="btn-ef-salvar-fechamento">Salvar fechamento do mês</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: novo lote de entrada -->
+<div class="overlay" id="overlay-ef-lote">
+  <div class="modal" style="max-width:640px; width:95vw;">
+    <div class="modal-head">
+      <h2>Novo lote de entrada</h2>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Nome curto do lote</label>
+          <input id="ef-lote-nome" placeholder="ex: Container 14">
+        </div>
+        <div class="field">
+          <label>Previsão de chegada</label>
+          <input type="date" id="ef-lote-data">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field" style="flex:2;">
+          <label>Produto</label>
+          <select id="ef-lote-sku"></select>
+        </div>
+        <div class="field">
+          <label>Quantidade</label>
+          <input type="number" min="1" id="ef-lote-qtd" placeholder="0">
+        </div>
+      </div>
+      <button class="ghost" id="btn-ef-lote-add-item" style="margin-bottom:14px;">+ Adicionar item ao lote</button>
+      <div id="ef-lote-itens-lista"></div>
+      <div class="status-msg" id="ef-lote-status"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="ghost" data-close>Cancelar</button>
+      <button class="primary" id="btn-ef-salvar-lote">Salvar lote</button>
     </div>
   </div>
 </div>
@@ -1187,7 +1351,469 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.add('active');
     document.getElementById('view-estoque').style.display = btn.dataset.tab === 'estoque' ? 'block' : 'none';
     document.getElementById('view-integracoes').style.display = btn.dataset.tab === 'integracoes' ? 'block' : 'none';
+    document.getElementById('view-estoque-futuro').style.display = btn.dataset.tab === 'estoque-futuro' ? 'block' : 'none';
+    if (btn.dataset.tab === 'estoque-futuro') renderEstoqueFuturo();
   });
+});
+
+// ====================== ESTOQUE FUTURO ======================
+
+const EF_GRUPOS = [
+  { key:'logbox', label:'Estoque LogBox' },
+  { key:'mti',    label:'Estoque MTI' },
+  { key:'bnk',    label:'Estoque BNK' }
+];
+let efGruposSelecionados = new Set(['logbox','mti','bnk']);
+let EF_LOTES = [];        // [{id, nome, data_prevista}]
+let EF_LOTE_ITENS = [];   // [{lote_id, sku, quantidade}]
+let EF_GRUPO_PRODUTOS = { mti: new Set(), bnk: new Set() }; // sku -> pertence
+let EF_MEDIAS = {}; // sku -> { 'YYYY-MM-01': media_mensal }
+let EF_FECHAMENTOS = {}; // sku -> { 'YYYY-MM-01': estoque_final_real }
+let EF_MES_BASE = new Date(new Date().getFullYear(), new Date().getMonth(), 1); // 1º dia do mês corrente
+const EF_QTD_MESES_VISIVEIS = 6;
+
+function efAnoMesStr(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+}
+function efAddMeses(d, n){
+  return new Date(d.getFullYear(), d.getMonth()+n, 1);
+}
+function efDiasNoMes(d){
+  return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+}
+function efLabelMes(d){
+  return d.toLocaleDateString('pt-BR', { month:'long', year:'numeric' }).replace(/^\w/, c => c.toUpperCase());
+}
+
+async function carregarEstoqueFuturo(){
+  const { data: lotes, error: e1 } = await sb.from('estoque_futuro_lotes').select('id,nome,data_prevista').order('data_prevista');
+  if (e1) { toast('Erro ao carregar lotes: ' + e1.message); return; }
+  EF_LOTES = lotes || [];
+
+  const { data: itens, error: e2 } = await sb.from('estoque_futuro_lote_itens').select('lote_id,sku,quantidade');
+  if (e2) { toast('Erro ao carregar itens de lote: ' + e2.message); return; }
+  EF_LOTE_ITENS = itens || [];
+
+  const { data: grupos, error: e3 } = await sb.from('estoque_futuro_grupo_produtos').select('grupo,sku');
+  if (e3) { toast('Erro ao carregar grupos MTI/BNK: ' + e3.message); return; }
+  EF_GRUPO_PRODUTOS = { mti: new Set(), bnk: new Set() };
+  (grupos || []).forEach(g => { if (EF_GRUPO_PRODUTOS[g.grupo]) EF_GRUPO_PRODUTOS[g.grupo].add(g.sku); });
+
+  const { data: medias, error: e4 } = await sb.from('estoque_futuro_medias').select('sku,ano_mes,media_mensal');
+  if (e4) { toast('Erro ao carregar médias de venda: ' + e4.message); return; }
+  EF_MEDIAS = {};
+  (medias || []).forEach(m => {
+    if (!EF_MEDIAS[m.sku]) EF_MEDIAS[m.sku] = {};
+    EF_MEDIAS[m.sku][m.ano_mes] = parseFloat(m.media_mensal);
+  });
+
+  const { data: fechamentos, error: e5 } = await sb.from('estoque_futuro_fechamentos').select('sku,ano_mes,estoque_final_real');
+  if (e5) { toast('Erro ao carregar fechamentos de mês: ' + e5.message); return; }
+  EF_FECHAMENTOS = {};
+  (fechamentos || []).forEach(f => {
+    if (!EF_FECHAMENTOS[f.sku]) EF_FECHAMENTOS[f.sku] = {};
+    EF_FECHAMENTOS[f.sku][f.ano_mes] = parseFloat(f.estoque_final_real);
+  });
+}
+
+function efProdutoPertenceAoGrupo(produto, grupo){
+  if (grupo === 'logbox') return produto.tipo === 'Importado';
+  return EF_GRUPO_PRODUTOS[grupo] && EF_GRUPO_PRODUTOS[grupo].has(produto.sku);
+}
+
+function efGrupoDoProduto(sku){
+  const p = PRODUTOS.find(x => x.sku === sku);
+  if (!p) return null;
+  if (p.tipo === 'Importado') return 'logbox';
+  if (EF_GRUPO_PRODUTOS.mti.has(sku)) return 'mti';
+  if (EF_GRUPO_PRODUTOS.bnk.has(sku)) return 'bnk';
+  return null;
+}
+
+function efProdutosVisiveis(){
+  return PRODUTOS.filter(p => {
+    const g = efGrupoDoProduto(p.sku);
+    return g && efGruposSelecionados.has(g);
+  }).sort((a,b) => a.sku.localeCompare(b.sku));
+}
+
+// Média mensal efetiva de um SKU num mês: valor definido para o mês, ou (se não definido)
+// o valor do mês anterior mais recente que tiver definição, ou 0.
+function efMediaEfetiva(sku, anoMesDate){
+  const mapa = EF_MEDIAS[sku] || {};
+  let d = new Date(anoMesDate);
+  for (let i = 0; i < 36; i++){ // olha até 3 anos pra trás
+    const key = efAnoMesStr(d);
+    if (mapa[key] !== undefined) return mapa[key];
+    d = efAddMeses(d, -1);
+  }
+  return 0;
+}
+
+async function efSalvarMedia(sku, anoMesDate, valor){
+  const anoMes = efAnoMesStr(anoMesDate);
+  const { error } = await sb.from('estoque_futuro_medias').upsert({
+    sku, ano_mes: anoMes, media_mensal: valor, atualizado_em: new Date().toISOString()
+  }, { onConflict: 'sku,ano_mes' });
+  if (error) { toast('Erro ao salvar média: ' + error.message); return; }
+  if (!EF_MEDIAS[sku]) EF_MEDIAS[sku] = {};
+  EF_MEDIAS[sku][anoMes] = valor;
+}
+
+function efEntradasDoSkuNoMes(sku, mesDate){
+  const inicio = mesDate;
+  const fim = efAddMeses(mesDate, 1);
+  let total = 0;
+  EF_LOTE_ITENS.filter(it => it.sku === sku).forEach(it => {
+    const lote = EF_LOTES.find(l => l.id === it.lote_id);
+    if (!lote) return;
+    const dataPrevista = new Date(lote.data_prevista + 'T00:00:00');
+    if (dataPrevista >= inicio && dataPrevista < fim) total += parseFloat(it.quantidade);
+  });
+  return total;
+}
+
+// Simula dia a dia o saldo do SKU ao longo dos meses visíveis, a partir do estoque atual (ou do
+// último fechamento real anterior), pra achar as tabelas mensais (Inicial/Saídas/Entradas/Final)
+// e as datas de ruptura. Meses já encerrados (com fechamento real) têm o Final travado nesse valor,
+// independente do que a simulação calcularia.
+function efCalcularProjecao(sku, meses){
+  const fechamentosDoSku = EF_FECHAMENTOS[sku] || {};
+  const mesAnterior = efAddMeses(meses[0], -1);
+  const fechamentoAnterior = fechamentosDoSku[efAnoMesStr(mesAnterior)];
+  let saldoCorrente = fechamentoAnterior !== undefined ? fechamentoAnterior : totalSku(sku);
+
+  const linhasMes = [];
+  const rupturas = [];
+  let estavaPositivo = true;
+
+  meses.forEach(mesDate => {
+    const inicioMes = saldoCorrente;
+    const media = efMediaEfetiva(sku, mesDate);
+    const dias = efDiasNoMes(mesDate);
+    const mediaDiaria = media / dias;
+    const entradasDoMes = []; // [{dia, qtd}]
+    EF_LOTE_ITENS.filter(it => it.sku === sku).forEach(it => {
+      const lote = EF_LOTES.find(l => l.id === it.lote_id);
+      if (!lote) return;
+      const dataPrevista = new Date(lote.data_prevista + 'T00:00:00');
+      if (dataPrevista.getFullYear() === mesDate.getFullYear() && dataPrevista.getMonth() === mesDate.getMonth()){
+        entradasDoMes.push({ dia: dataPrevista.getDate(), qtd: parseFloat(it.quantidade) });
+      }
+    });
+    const totalEntradasMes = entradasDoMes.reduce((s,e) => s + e.qtd, 0);
+
+    for (let dia = 1; dia <= dias; dia++){
+      saldoCorrente -= mediaDiaria;
+      entradasDoMes.filter(e => e.dia === dia).forEach(e => { saldoCorrente += e.qtd; });
+      if (estavaPositivo && saldoCorrente <= 0){
+        rupturas.push({ sku, data: new Date(mesDate.getFullYear(), mesDate.getMonth(), dia) });
+        estavaPositivo = false;
+      } else if (saldoCorrente > 0){
+        estavaPositivo = true;
+      }
+    }
+
+    const anoMesStr = efAnoMesStr(mesDate);
+    const fechamento = fechamentosDoSku[anoMesStr];
+    const fechado = fechamento !== undefined;
+    const finalDoMes = fechado ? fechamento : saldoCorrente;
+    if (fechado) saldoCorrente = fechamento; // trava a base do próximo mês no valor real lançado
+
+    linhasMes.push({
+      mesDate, inicial: inicioMes, saidas: media, entradas: totalEntradasMes, final: finalDoMes, fechado
+    });
+  });
+
+  return { linhasMes, rupturas };
+}
+
+function renderChipsEF(){
+  const wrap = document.getElementById('chips-ef-grupos');
+  wrap.innerHTML = '';
+  EF_GRUPOS.forEach(g => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (efGruposSelecionados.has(g.key) ? ' active' : '');
+    chip.textContent = g.label;
+    chip.onclick = () => {
+      if (efGruposSelecionados.has(g.key)) efGruposSelecionados.delete(g.key);
+      else efGruposSelecionados.add(g.key);
+      renderChipsEF();
+      renderEstoqueFuturo();
+    };
+    wrap.appendChild(chip);
+  });
+}
+
+function efMesesVisiveis(){
+  const meses = [];
+  for (let i = 0; i < EF_QTD_MESES_VISIVEIS; i++) meses.push(efAddMeses(EF_MES_BASE, i));
+  return meses;
+}
+
+function renderEstoqueFuturo(){
+  const meses = efMesesVisiveis();
+  document.getElementById('ef-periodo-label').textContent =
+    efLabelMes(meses[0]) + ' — ' + efLabelMes(meses[meses.length-1]);
+
+  const thead = document.getElementById('ef-thead');
+  const tbody = document.getElementById('ef-tbody');
+  const produtos = efProdutosVisiveis();
+
+  let headerTop = '<tr class="ef-grupo-header"><th class="sku-col" rowspan="2">SKU</th><th class="sku-col" rowspan="2">Produto</th>';
+  let headerBottom = '<tr>';
+  meses.forEach(m => {
+    headerTop += `<th colspan="4">${efLabelMes(m)}</th>`;
+    headerBottom += '<th>Inicial</th><th>Saídas</th><th>Entradas</th><th>Final</th>';
+  });
+  headerTop += '</tr>';
+  headerBottom += '</tr>';
+  thead.innerHTML = headerTop + headerBottom;
+
+  tbody.innerHTML = '';
+  const todasRupturas = [];
+
+  produtos.forEach(p => {
+    const { linhasMes, rupturas } = efCalcularProjecao(p.sku, meses);
+    todasRupturas.push(...rupturas.map(r => ({ ...r, grupo: efGrupoDoProduto(p.sku) })));
+
+    const tr = document.createElement('tr');
+    let html = `<td class="sku-col mono">${p.sku}</td><td class="sku-col">${p.nome}</td>`;
+    linhasMes.forEach((linha, idx) => {
+      const mesDate = meses[idx];
+      const finalNegativo = linha.final < 0;
+      html += `<td class="mono">${Math.round(linha.inicial).toLocaleString('pt-BR')}</td>`;
+      html += `<td><input type="number" class="ef-media-input" data-sku="${p.sku}" data-mes="${efAnoMesStr(mesDate)}" value="${linha.saidas}" ${linha.fechado ? 'disabled title="Mês encerrado"' : ''}></td>`;
+      html += `<td class="mono">${Math.round(linha.entradas).toLocaleString('pt-BR')}</td>`;
+      html += `<td class="ef-final${finalNegativo ? ' danger' : ''}">${Math.round(linha.final).toLocaleString('pt-BR')}${linha.fechado ? '<span class="ef-lock" title="Mês encerrado com estoque real lançado">🔒</span>' : ''}</td>`;
+    });
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('.ef-media-input').forEach(inp => {
+    inp.addEventListener('change', async (e) => {
+      const sku = e.target.dataset.sku;
+      const mesDate = new Date(e.target.dataset.mes + 'T00:00:00');
+      const valor = parseFloat(e.target.value) || 0;
+      await efSalvarMedia(sku, mesDate, valor);
+      renderEstoqueFuturo();
+    });
+  });
+
+  document.getElementById('ef-empty').style.display = produtos.length === 0 ? 'block' : 'none';
+  document.getElementById('ef-tabela').style.display = produtos.length === 0 ? 'none' : 'table';
+
+  const wrap = document.getElementById('ef-alertas-wrap');
+  const lista = document.getElementById('ef-alertas-lista');
+  if (todasRupturas.length === 0){
+    wrap.style.display = 'none';
+  } else {
+    wrap.style.display = 'block';
+    todasRupturas.sort((a,b) => a.data - b.data);
+    lista.innerHTML = todasRupturas.map(r => {
+      const grupoLabel = EF_GRUPOS.find(g => g.key === r.grupo)?.label || r.grupo;
+      const dataFmt = r.data.toLocaleDateString('pt-BR');
+      return `<div class="ef-alerta-item">SKU <span class="mono">${r.sku}</span> — ruptura prevista em <span class="mono">${dataFmt}</span> (${grupoLabel})</div>`;
+    }).join('');
+  }
+}
+
+document.getElementById('btn-ef-mes-anterior').addEventListener('click', () => {
+  EF_MES_BASE = efAddMeses(EF_MES_BASE, -1);
+  renderEstoqueFuturo();
+});
+document.getElementById('btn-ef-mes-proximo').addEventListener('click', () => {
+  EF_MES_BASE = efAddMeses(EF_MES_BASE, 1);
+  renderEstoqueFuturo();
+});
+
+// ---- Modal: gerenciar produtos MTI/BNK ----
+function efPopularSelectProdutosNacionais(selectEl){
+  const nacionais = PRODUTOS.filter(p => p.tipo === 'Nacional').sort((a,b) => a.sku.localeCompare(b.sku));
+  selectEl.innerHTML = nacionais.map(p => `<option value="${p.sku}">${p.sku} — ${p.nome}</option>`).join('');
+}
+
+function renderListaGruposModal(){
+  ['mti','bnk'].forEach(grupo => {
+    const wrap = document.getElementById(`ef-lista-${grupo}`);
+    const skus = [...EF_GRUPO_PRODUTOS[grupo]];
+    if (skus.length === 0){
+      wrap.innerHTML = '<div class="hint" style="margin:0;">Nenhum produto adicionado ainda.</div>';
+      return;
+    }
+    wrap.innerHTML = skus.map(sku => {
+      const p = PRODUTOS.find(x => x.sku === sku);
+      return `<div class="ef-grupo-linha"><span class="mono">${sku}</span> — ${p ? p.nome : ''}
+        <button class="ghost" data-remover-grupo="${grupo}" data-remover-sku="${sku}">Remover</button></div>`;
+    }).join('');
+  });
+  document.querySelectorAll('[data-remover-grupo]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const grupo = btn.dataset.removerGrupo, sku = btn.dataset.removerSku;
+      const { error } = await sb.from('estoque_futuro_grupo_produtos').delete().eq('grupo', grupo).eq('sku', sku);
+      if (error) { toast('Erro ao remover: ' + error.message); return; }
+      EF_GRUPO_PRODUTOS[grupo].delete(sku);
+      renderListaGruposModal();
+      renderEstoqueFuturo();
+    });
+  });
+}
+
+document.getElementById('btn-ef-gerenciar-produtos').addEventListener('click', () => {
+  efPopularSelectProdutosNacionais(document.getElementById('ef-add-sku'));
+  renderListaGruposModal();
+  document.getElementById('overlay-ef-grupos').classList.add('open');
+});
+
+document.getElementById('btn-ef-add-produto').addEventListener('click', async () => {
+  const grupo = document.getElementById('ef-add-grupo').value;
+  const sku = document.getElementById('ef-add-sku').value;
+  if (!sku) return;
+  const { error } = await sb.from('estoque_futuro_grupo_produtos').upsert({ grupo, sku }, { onConflict: 'grupo,sku' });
+  if (error) { toast('Erro ao adicionar produto: ' + error.message); return; }
+  EF_GRUPO_PRODUTOS[grupo].add(sku);
+  renderListaGruposModal();
+  renderEstoqueFuturo();
+  toast('Produto adicionado ao estoque ' + grupo.toUpperCase());
+});
+
+// ---- Modal: novo lote de entrada ----
+let efLoteItensTemp = []; // [{sku, quantidade}]
+
+document.getElementById('btn-ef-novo-lote').addEventListener('click', () => {
+  efLoteItensTemp = [];
+  document.getElementById('ef-lote-nome').value = '';
+  document.getElementById('ef-lote-data').value = '';
+  document.getElementById('ef-lote-qtd').value = '';
+  document.getElementById('ef-lote-status').textContent = '';
+  const selectSku = document.getElementById('ef-lote-sku');
+  selectSku.innerHTML = PRODUTOS.slice().sort((a,b) => a.sku.localeCompare(b.sku))
+    .map(p => `<option value="${p.sku}">${p.sku} — ${p.nome}</option>`).join('');
+  renderLoteItensTemp();
+  document.getElementById('overlay-ef-lote').classList.add('open');
+});
+
+function renderLoteItensTemp(){
+  const wrap = document.getElementById('ef-lote-itens-lista');
+  if (efLoteItensTemp.length === 0){
+    wrap.innerHTML = '<div class="hint" style="margin:0 0 14px;">Nenhum item adicionado ainda.</div>';
+    return;
+  }
+  wrap.innerHTML = efLoteItensTemp.map((it, idx) => {
+    const p = PRODUTOS.find(x => x.sku === it.sku);
+    return `<div class="ef-lote-item-row"><span class="mono">${it.sku}</span> — ${p ? p.nome : ''} — <b>${it.quantidade}</b> un.
+      <button class="ghost" data-remover-item="${idx}">Remover</button></div>`;
+  }).join('');
+  wrap.querySelectorAll('[data-remover-item]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      efLoteItensTemp.splice(parseInt(btn.dataset.removerItem), 1);
+      renderLoteItensTemp();
+    });
+  });
+}
+
+document.getElementById('btn-ef-lote-add-item').addEventListener('click', () => {
+  const sku = document.getElementById('ef-lote-sku').value;
+  const qtd = parseFloat(document.getElementById('ef-lote-qtd').value);
+  if (!sku || !qtd || qtd <= 0) { toast('Informe produto e quantidade válida'); return; }
+  const existente = efLoteItensTemp.find(it => it.sku === sku);
+  if (existente) existente.quantidade += qtd;
+  else efLoteItensTemp.push({ sku, quantidade: qtd });
+  document.getElementById('ef-lote-qtd').value = '';
+  renderLoteItensTemp();
+});
+
+document.getElementById('btn-ef-salvar-lote').addEventListener('click', async () => {
+  const nome = document.getElementById('ef-lote-nome').value.trim();
+  const data = document.getElementById('ef-lote-data').value;
+  const status = document.getElementById('ef-lote-status');
+  if (!nome || !data) { status.textContent = 'Preencha nome e data de previsão.'; return; }
+  if (efLoteItensTemp.length === 0) { status.textContent = 'Adicione pelo menos um item ao lote.'; return; }
+
+  const { data: loteInserido, error: e1 } = await sb.from('estoque_futuro_lotes')
+    .insert({ nome, data_prevista: data }).select().single();
+  if (e1) { status.textContent = 'Erro: ' + e1.message; return; }
+
+  const itensParaInserir = efLoteItensTemp.map(it => ({ lote_id: loteInserido.id, sku: it.sku, quantidade: it.quantidade }));
+  const { error: e2 } = await sb.from('estoque_futuro_lote_itens').insert(itensParaInserir);
+  if (e2) { status.textContent = 'Erro ao salvar itens: ' + e2.message; return; }
+
+  toast('Lote de entrada salvo');
+  document.getElementById('overlay-ef-lote').classList.remove('open');
+  await carregarEstoqueFuturo();
+  renderEstoqueFuturo();
+});
+
+// ---- Fechar mês ----
+
+// Todo produto que pertence a algum dos 3 estoques (LogBox automático, ou MTI/BNK manualmente adicionados)
+function efProdutosControlados(){
+  return PRODUTOS.filter(p => efGrupoDoProduto(p.sku)).sort((a,b) => a.sku.localeCompare(b.sku));
+}
+
+// Mês mais antigo que já teve algum lançamento/controle e ainda não foi encerrado pra todos os produtos controlados
+function efEncontrarMesParaFechar(){
+  const produtos = efProdutosControlados();
+  let ancora = null;
+  Object.values(EF_FECHAMENTOS).forEach(porMes => {
+    Object.keys(porMes).forEach(k => {
+      const d = new Date(k + 'T00:00:00');
+      if (!ancora || d < ancora) ancora = d;
+    });
+  });
+  if (!ancora) ancora = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+  let mes = ancora;
+  for (let i = 0; i < 60; i++){
+    const anoMes = efAnoMesStr(mes);
+    const todosFechados = produtos.length > 0 && produtos.every(p => EF_FECHAMENTOS[p.sku] && EF_FECHAMENTOS[p.sku][anoMes] !== undefined);
+    if (!todosFechados) return mes;
+    mes = efAddMeses(mes, 1);
+  }
+  return mes;
+}
+
+let efMesFechandoAtual = null;
+
+document.getElementById('btn-ef-fechar-mes').addEventListener('click', () => {
+  const produtos = efProdutosControlados();
+  if (produtos.length === 0) { toast('Nenhum produto no LogBox, MTI ou BNK ainda.'); return; }
+
+  efMesFechandoAtual = efEncontrarMesParaFechar();
+  document.getElementById('ef-fechar-mes-label').textContent = efLabelMes(efMesFechandoAtual);
+  document.getElementById('ef-fechar-status').textContent = '';
+
+  // Sugere como valor inicial o Final projetado calculado até agora (o próprio Wissam ajusta pro valor real)
+  const wrap = document.getElementById('ef-fechar-lista');
+  wrap.innerHTML = produtos.map(p => {
+    const { linhasMes } = efCalcularProjecao(p.sku, [efMesFechandoAtual]);
+    const sugestao = Math.round(linhasMes[0].final);
+    return `<div class="ef-fechar-linha"><span><span class="mono">${p.sku}</span> — ${p.nome}</span>
+      <input type="number" data-fechar-sku="${p.sku}" value="${sugestao}"></div>`;
+  }).join('');
+
+  document.getElementById('overlay-ef-fechar-mes').classList.add('open');
+});
+
+document.getElementById('btn-ef-salvar-fechamento').addEventListener('click', async () => {
+  const status = document.getElementById('ef-fechar-status');
+  const anoMes = efAnoMesStr(efMesFechandoAtual);
+  const inputs = document.querySelectorAll('[data-fechar-sku]');
+  const registros = [...inputs].map(inp => ({
+    sku: inp.dataset.fecharSku,
+    ano_mes: anoMes,
+    estoque_final_real: parseFloat(inp.value) || 0,
+    fechado_em: new Date().toISOString()
+  }));
+
+  const { error } = await sb.from('estoque_futuro_fechamentos').upsert(registros, { onConflict: 'sku,ano_mes' });
+  if (error) { status.textContent = 'Erro ao salvar fechamento: ' + error.message; return; }
+
+  toast('Mês encerrado — ' + efLabelMes(efMesFechandoAtual));
+  document.getElementById('overlay-ef-fechar-mes').classList.remove('open');
+  await carregarEstoqueFuturo();
+  renderEstoqueFuturo();
 });
 
 document.getElementById('btn-pendentes').addEventListener('click', () => {
@@ -1195,7 +1821,10 @@ document.getElementById('btn-pendentes').addEventListener('click', () => {
   document.getElementById('overlay-pendentes').classList.add('open');
 });
 
-carregarTudo();
+carregarTudo().then(async () => {
+  await carregarEstoqueFuturo();
+  renderChipsEF();
+});
 carregarPendentes();
 verificarCallbackML();
 verificarCallbackShopee();
