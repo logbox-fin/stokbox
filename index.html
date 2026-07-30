@@ -209,24 +209,53 @@
   .badge.ok{ background:rgba(94,200,160,0.12); color:var(--ok); }
   .badge.danger{ background:rgba(232,96,76,0.12); color:var(--danger); }
 
-  .ef-meses-nav{ display:flex; align-items:center; justify-content:center; gap:18px; margin-bottom:18px; }
-  #ef-periodo-label{ font-size:15px; min-width:160px; text-align:center; }
+  .ef-periodo-info{ display:flex; align-items:baseline; gap:14px; margin-bottom:14px; }
+  #ef-periodo-label{ font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:16px; text-transform:uppercase; letter-spacing:0.03em; }
+  .ef-periodo-hint{ font-size:12px; color:var(--text-faint); }
 
   .ef-alertas{ background:rgba(199,68,46,0.08); border:1px solid var(--danger); border-radius:var(--radius); padding:16px 18px; margin-bottom:18px; }
   .ef-alertas-head{ font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:0.02em; color:var(--danger); text-transform:uppercase; font-size:13px; margin-bottom:8px; }
   .ef-alerta-item{ font-size:13px; color:var(--text); padding:4px 0; }
   .ef-alerta-item .mono{ color:var(--danger); font-weight:600; }
 
-  #ef-tabela th, #ef-tabela td{ text-align:right; }
-  #ef-tabela th.sku-col, #ef-tabela td.sku-col{ text-align:left; }
-  #ef-tabela thead tr.ef-grupo-header th{ background:var(--surface-3); border-bottom:1px solid var(--border); }
-  #ef-tabela td.ef-final{ font-weight:700; font-family:'JetBrains Mono',monospace; }
-  #ef-tabela td.ef-final.danger{ color:var(--danger); }
-  .ef-media-input{
-    width:64px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px;
-    padding:5px 6px; color:var(--text); font-size:12px; font-family:'JetBrains Mono',monospace; text-align:right;
+  .ef-tabela-scroll{
+    overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface);
   }
+  #ef-tabela{ border:none; border-radius:0; width:auto; min-width:100%; }
+  #ef-tabela th, #ef-tabela td{ text-align:right; white-space:nowrap; padding:10px 14px; }
+  #ef-tabela th.sku-col, #ef-tabela td.sku-col{ text-align:left; white-space:normal; }
+
+  /* SKU e Produto fixos durante o scroll horizontal */
+  #ef-tabela th.sku-col:nth-child(1), #ef-tabela td.sku-col:nth-child(1){
+    position:sticky; left:0; z-index:3; background:var(--surface); min-width:110px;
+  }
+  #ef-tabela th.sku-col:nth-child(2), #ef-tabela td.sku-col:nth-child(2){
+    position:sticky; left:110px; z-index:3; background:var(--surface); min-width:180px; max-width:220px; white-space:normal;
+    box-shadow: 2px 0 4px -2px rgba(0,0,0,0.08);
+  }
+  #ef-tabela thead th{ background:var(--surface-2); z-index:4; }
+  #ef-tabela thead tr.ef-grupo-header th{ border-bottom:1px solid var(--border); font-size:12.5px; }
+  #ef-tabela thead tr.ef-grupo-header th.ef-mes-par{ background:var(--surface-3); }
+  #ef-tabela thead tr:nth-child(2) th{ font-size:11px; padding-top:6px; padding-bottom:6px; }
+  #ef-tabela tbody tr:nth-child(even) td{ background:var(--surface-2); }
+  #ef-tabela tbody tr:nth-child(even) td.sku-col{ background:var(--surface-2); }
+  #ef-tabela tbody tr:hover td{ background:var(--accent-dim); }
+  #ef-tabela td.ef-mes-par{ background:rgba(0,0,0,0.015); }
+  #ef-tabela td.ef-col-inicial{ color:var(--text-faint); font-size:13px; }
+  #ef-tabela td.ef-col-entradas{ color:var(--ok); font-family:'JetBrains Mono',monospace; }
+  #ef-tabela td.ef-final{ font-weight:700; font-family:'JetBrains Mono',monospace; font-size:14.5px; border-left:1px solid var(--border); }
+  #ef-tabela td.ef-final.danger{ color:var(--danger); }
+  #ef-tabela th:last-of-type, #ef-tabela td.ef-final{ border-right:2px solid var(--border); }
+
+  .ef-media-input{
+    width:64px; background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    padding:5px 6px; color:var(--text); font-size:12px; font-family:'JetBrains Mono',monospace; text-align:right;
+    -moz-appearance:textfield;
+  }
+  .ef-media-input::-webkit-outer-spin-button,
+  .ef-media-input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
   .ef-media-input:focus{ outline:none; border-color:var(--accent); }
+  .ef-media-input:disabled{ opacity:0.5; }
 
   .ef-grupo-linha{ display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surface-2); border-radius:8px; margin-bottom:6px; font-size:13px; }
   .ef-grupo-linha button{ padding:4px 10px; font-size:11px; }
@@ -436,6 +465,10 @@
   <div class="toolbar">
     <div class="toolbar-left">
       <div class="chips" id="chips-ef-grupos" style="margin-bottom:0;"></div>
+      <select class="canal-select" id="ef-ordenar-por">
+        <option value="sku">Ordenar: SKU (A-Z)</option>
+        <option value="nome">Ordenar: Nome (A-Z)</option>
+      </select>
     </div>
     <div style="display:flex; gap:10px;">
       <button class="ghost" id="btn-ef-gerenciar-produtos">Gerenciar produtos MTI/BNK</button>
@@ -444,10 +477,9 @@
     </div>
   </div>
 
-  <div class="ef-meses-nav">
-    <button class="ghost" id="btn-ef-mes-anterior">‹ Mês anterior</button>
-    <div class="label" id="ef-periodo-label">—</div>
-    <button class="ghost" id="btn-ef-mes-proximo">Próximo mês ›</button>
+  <div class="ef-periodo-info">
+    <span id="ef-periodo-label">—</span>
+    <span class="ef-periodo-hint">Arraste a tabela pros lados pra ver outros meses</span>
   </div>
 
   <div id="ef-alertas-wrap" style="display:none;">
@@ -457,7 +489,7 @@
     </div>
   </div>
 
-  <div style="overflow-x:auto;">
+  <div class="ef-tabela-scroll" id="ef-tabela-scroll">
     <table id="ef-tabela">
       <thead id="ef-thead"></thead>
       <tbody id="ef-tbody"></tbody>
@@ -1370,7 +1402,7 @@ let EF_GRUPO_PRODUTOS = { mti: new Set(), bnk: new Set() }; // sku -> pertence
 let EF_MEDIAS = {}; // sku -> { 'YYYY-MM-01': media_mensal }
 let EF_FECHAMENTOS = {}; // sku -> { 'YYYY-MM-01': estoque_final_real }
 let EF_MES_BASE = new Date(new Date().getFullYear(), new Date().getMonth(), 1); // 1º dia do mês corrente
-const EF_QTD_MESES_VISIVEIS = 6;
+const EF_QTD_MESES_VISIVEIS = 12;
 
 function efAnoMesStr(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
@@ -1431,10 +1463,11 @@ function efGrupoDoProduto(sku){
 }
 
 function efProdutosVisiveis(){
+  const ordem = document.getElementById('ef-ordenar-por')?.value || 'sku';
   return PRODUTOS.filter(p => {
     const g = efGrupoDoProduto(p.sku);
     return g && efGruposSelecionados.has(g);
-  }).sort((a,b) => a.sku.localeCompare(b.sku));
+  }).sort((a,b) => ordem === 'nome' ? a.nome.localeCompare(b.nome) : a.sku.localeCompare(b.sku));
 }
 
 // Média mensal efetiva de um SKU num mês: valor definido para o mês, ou (se não definido)
@@ -1554,7 +1587,7 @@ function efMesesVisiveis(){
 function renderEstoqueFuturo(){
   const meses = efMesesVisiveis();
   document.getElementById('ef-periodo-label').textContent =
-    efLabelMes(meses[0]) + ' — ' + efLabelMes(meses[meses.length-1]);
+    efLabelMes(meses[0]) + ' até ' + efLabelMes(meses[meses.length-1]);
 
   const thead = document.getElementById('ef-thead');
   const tbody = document.getElementById('ef-tbody');
@@ -1562,9 +1595,10 @@ function renderEstoqueFuturo(){
 
   let headerTop = '<tr class="ef-grupo-header"><th class="sku-col" rowspan="2">SKU</th><th class="sku-col" rowspan="2">Produto</th>';
   let headerBottom = '<tr>';
-  meses.forEach(m => {
-    headerTop += `<th colspan="4">${efLabelMes(m)}</th>`;
-    headerBottom += '<th>Inicial</th><th>Saídas</th><th>Entradas</th><th>Final</th>';
+  meses.forEach((m, idx) => {
+    const parClass = idx % 2 === 1 ? ' ef-mes-par' : '';
+    headerTop += `<th colspan="4" class="${parClass.trim()}">${efLabelMes(m)}</th>`;
+    headerBottom += `<th class="${parClass.trim()}">Inicial</th><th class="${parClass.trim()}">Saídas</th><th class="${parClass.trim()}">Entradas</th><th class="${parClass.trim()}">Final</th>`;
   });
   headerTop += '</tr>';
   headerBottom += '</tr>';
@@ -1582,10 +1616,11 @@ function renderEstoqueFuturo(){
     linhasMes.forEach((linha, idx) => {
       const mesDate = meses[idx];
       const finalNegativo = linha.final < 0;
-      html += `<td class="mono">${Math.round(linha.inicial).toLocaleString('pt-BR')}</td>`;
-      html += `<td><input type="number" class="ef-media-input" data-sku="${p.sku}" data-mes="${efAnoMesStr(mesDate)}" value="${linha.saidas}" ${linha.fechado ? 'disabled title="Mês encerrado"' : ''}></td>`;
-      html += `<td class="mono">${Math.round(linha.entradas).toLocaleString('pt-BR')}</td>`;
-      html += `<td class="ef-final${finalNegativo ? ' danger' : ''}">${Math.round(linha.final).toLocaleString('pt-BR')}${linha.fechado ? '<span class="ef-lock" title="Mês encerrado com estoque real lançado">🔒</span>' : ''}</td>`;
+      const parClass = idx % 2 === 1 ? 'ef-mes-par' : '';
+      html += `<td class="mono ef-col-inicial ${parClass}">${Math.round(linha.inicial).toLocaleString('pt-BR')}</td>`;
+      html += `<td class="${parClass}"><input type="number" class="ef-media-input" data-sku="${p.sku}" data-mes="${efAnoMesStr(mesDate)}" value="${linha.saidas}" ${linha.fechado ? 'disabled title="Mês encerrado"' : ''}></td>`;
+      html += `<td class="mono ef-col-entradas ${parClass}">${Math.round(linha.entradas).toLocaleString('pt-BR')}</td>`;
+      html += `<td class="ef-final${finalNegativo ? ' danger' : ''} ${parClass}">${Math.round(linha.final).toLocaleString('pt-BR')}${linha.fechado ? '<span class="ef-lock" title="Mês encerrado com estoque real lançado">🔒</span>' : ''}</td>`;
     });
     tr.innerHTML = html;
     tbody.appendChild(tr);
@@ -1619,14 +1654,7 @@ function renderEstoqueFuturo(){
   }
 }
 
-document.getElementById('btn-ef-mes-anterior').addEventListener('click', () => {
-  EF_MES_BASE = efAddMeses(EF_MES_BASE, -1);
-  renderEstoqueFuturo();
-});
-document.getElementById('btn-ef-mes-proximo').addEventListener('click', () => {
-  EF_MES_BASE = efAddMeses(EF_MES_BASE, 1);
-  renderEstoqueFuturo();
-});
+document.getElementById('ef-ordenar-por').addEventListener('change', renderEstoqueFuturo);
 
 // ---- Modal: gerenciar produtos MTI/BNK ----
 function efPopularSelectProdutosNacionais(selectEl){
