@@ -860,29 +860,41 @@ async function resolverPendente(id, status, vinculadoASku, fatorConversao){
   const payload = { status, resolvido_em: new Date().toISOString() };
   if (vinculadoASku) { payload.vinculado_a_sku = vinculadoASku; payload.fator_conversao = fator; }
 
-  // Busca os dados do pendente antes de resolver, pra já gravar o estoque se for vínculo
+  // Busca os dados do pendente antes de resolver, pra saber de qual canal re-sincronizar depois
   const pendente = PENDENTES.find(p => p.id === id);
 
   const { error } = await sb.from('skus_pendentes').update(payload).eq('id', id);
   if (error) { toast('Erro: ' + error.message); return; }
 
   if (status === 'vinculado' && pendente) {
-    // soma ao que j\u00e1 existir pro produto/canal de destino, em vez de sobrescrever
-    // (o produto m\u00e3e pode j\u00e1 ter estoque pr\u00f3prio reportado nesse mesmo canal)
-    const { data: atual } = await sb.from('estoque_atual').select('saldo').eq('sku', vinculadoASku).eq('canal', pendente.canal).maybeSingle();
-    const saldoConvertido = Math.round(pendente.saldo * fator);
-    const novoSaldo = (atual?.saldo || 0) + saldoConvertido;
-
-    await sb.from('estoque_atual').upsert({
-      sku: vinculadoASku, canal: pendente.canal, saldo: novoSaldo, atualizado_em: new Date().toISOString()
-    }, { onConflict: 'sku,canal' });
-    await sb.from('estoque_snapshots').insert({ sku: vinculadoASku, canal: pendente.canal, saldo: novoSaldo });
+    // Não soma o saldo do pendente por cima do que já existe (isso duplicava estoque quando
+    // vários SKUs de cor eram vinculados em sequência). Em vez disso, dispara uma nova
+    // sincronização completa do canal de origem, que recalcula o saldo do zero direto na API
+    // e já contabiliza esse vínculo novo corretamente.
+    toast('Vinculado — recalculando estoque desse canal…');
+    await sincronizarCanal(pendente.canal);
   }
 
   toast(status === 'ignorado' ? 'SKU ignorado' : 'SKU vinculado e estoque atualizado');
   await carregarPendentes();
   renderPendentes();
   await carregarTudo();
+}
+
+async function sincronizarCanal(canal){
+  const rota = canal === 'magis5_proprio' ? 'sync-magis5-estoque'
+    : canal === 'mercado_livre_full' ? 'sync-ml-estoque'
+    : canal === 'shopee_full' ? 'sync-shopee-estoque'
+    : null;
+  if (!rota) return; // amazon_full ainda não tem sincronização automática
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/${rota}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }
+    });
+  } catch (err) {
+    toast('Erro ao recalcular o canal: ' + err.message);
+  }
 }
 
 async function carregarTudo(){
