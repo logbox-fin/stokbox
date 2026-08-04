@@ -1142,12 +1142,28 @@ async function salvarProduto(){
 }
 
 // Eventos
-function exportarFechamento(){
+async function exportarFechamento(){
   const linhas = [];
   linhas.push(['Cód Prod Emp', 'Sit.', 'CNPJ Terceiro', 'Quantidade', 'Valor Unitário', 'Valor Total', 'Descrição do Produto', '(NCM)', 'Unid Medida']);
 
+  const dataSelecionada = document.getElementById('data-cmv').value || new Date().toISOString().slice(0,10);
+  const usandoDataPassada = !!document.getElementById('data-cmv').value;
+
+  // Se uma data foi escolhida, busca o estoque histórico (como estava no fim daquele dia)
+  // em vez do estoque ao vivo — senão o fechamento de um dia passado saía igual ao de hoje.
+  let estoqueParaExportar = ESTOQUE;
+  if (usandoDataPassada){
+    const { data: historico, error } = await sb.rpc('estoque_em_data', { data_ref: dataSelecionada });
+    if (error) { toast('Erro ao buscar estoque histórico: ' + error.message); return; }
+    estoqueParaExportar = {};
+    (historico || []).forEach(row => {
+      if (!estoqueParaExportar[row.sku]) estoqueParaExportar[row.sku] = {};
+      estoqueParaExportar[row.sku][row.canal] = Number(row.saldo);
+    });
+  }
+
   PRODUTOS.forEach(p => {
-    const estoquesDoSku = ESTOQUE[p.sku] || {};
+    const estoquesDoSku = estoqueParaExportar[p.sku] || {};
     const cmvInfo = p.tipo === 'Importado' ? CMV_POR_SKU[p.sku] : CMV_NACIONAIS[p.sku];
     const valorUnitario = (cmvInfo && !isNaN(cmvInfo.valor)) ? cmvInfo.valor : 0;
 
@@ -1184,7 +1200,6 @@ function exportarFechamento(){
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Fechamento');
 
-  const dataSelecionada = document.getElementById('data-cmv').value || new Date().toISOString().slice(0,10);
   XLSX.writeFile(wb, `fechamento-estoque-${dataSelecionada}.xlsx`);
   toast('Planilha gerada');
 }
