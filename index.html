@@ -336,7 +336,7 @@
   <div class="actions">
     <button class="ghost" id="btn-pendentes">SKUs pendentes <span id="badge-pendentes"></span></button>
     <button class="ghost" id="btn-refresh">Atualizar</button>
-    <button class="primary" id="btn-exportar">Exportar fechamento do mês</button>
+    <button class="primary" id="btn-exportar">Exportar Estoque</button>
     <button class="primary" id="btn-novo">+ Novo produto</button>
   </div>
 </header>
@@ -392,11 +392,6 @@
         <option value="sku">Ordenar: SKU (A-Z)</option>
         <option value="nome">Ordenar: Nome (A-Z)</option>
       </select>
-      <div class="date-field">
-        <span>CMV Contábil (Importados) em:</span>
-        <input type="date" id="data-cmv">
-        <button id="btn-cmv-hoje" class="ghost">Hoje</button>
-      </div>
     </div>
     <div class="label" id="contagem">—</div>
   </div>
@@ -516,6 +511,11 @@
       <button class="modal-close" data-close>&times;</button>
     </div>
     <div class="modal-body">
+      <div class="field" style="margin-bottom:16px;">
+        <label>Data desse lançamento</label>
+        <input type="date" id="m-data-lancamento">
+        <p class="hint" style="margin-top:6px;">Vale como estoque atual de hoje, e também fica valendo no histórico a partir dessa data (útil pra corrigir um lançamento atrasado, ex: lançar hoje um valor que já valia desde uma data passada).</p>
+      </div>
       <div class="channel-row">
         <span class="dot" style="background:var(--c-meli)"></span>
         <span class="ch-name">Full Mercado Livre</span>
@@ -550,6 +550,26 @@
 </div>
 
 <!-- Modal: novo produto -->
+<div class="overlay" id="overlay-exportar">
+  <div class="modal" style="max-width:420px; width:95vw;">
+    <div class="modal-head">
+      <h2>Exportar Estoque</h2>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Estoque e CMV referentes à data</label>
+        <input type="date" id="exp-data">
+        <p class="hint" style="margin-top:6px;">Pega o estoque e o CMV como estavam no fim desse dia. Deixe em branco pra exportar o estoque de hoje.</p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="ghost" data-close>Cancelar</button>
+      <button class="primary" id="btn-exportar-confirmar">Gerar planilha</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="overlay-produto">
   <div class="modal">
     <div class="modal-head">
@@ -940,12 +960,11 @@ async function carregarTudo(){
   renderResumo(ultima);
 }
 
-// Calcula o CMV Contábil dos Importados vigente na data escolhida (ou o mais recente, se nenhuma data escolhida)
-function calcularCmvPorData(){
-  const dataStr = document.getElementById('data-cmv').value; // formato yyyy-mm-dd ou ''
+// Calcula o CMV Contábil dos Importados vigente numa data (ou hoje, se nenhuma data for passada).
+// Retorna o mapa pronto, sem mexer em nenhum estado global — quem chama decide o que fazer com ele.
+function calcularCmvParaData(dataStr){
   const limite = dataStr ? new Date(dataStr + 'T23:59:59') : new Date();
-
-  CMV_POR_SKU = {};
+  const mapa = {};
   for (const sku in CMV_LB_DATA) {
     const clbsDoSku = CMV_LB_DATA[sku];
     let melhor = null; // { data, cmv }
@@ -959,9 +978,16 @@ function calcularCmvPorData(){
       }
     }
     if (melhor) {
-      CMV_POR_SKU[sku] = { valor: melhor.cmv, data: melhor.data.toISOString(), origem: melhor.clbId };
+      mapa[sku] = { valor: melhor.cmv, data: melhor.data.toISOString(), origem: melhor.clbId };
     }
   }
+  return mapa;
+}
+
+// A tabela na tela sempre mostra o CMV de hoje (não tem mais seletor de data na tela —
+// consultar uma data passada agora só é feito via "Exportar Estoque").
+function calcularCmvPorData(){
+  CMV_POR_SKU = calcularCmvParaData('');
 }
 
 function totalSku(sku){
@@ -1050,6 +1076,7 @@ function abrirModalEstoque(sku, nome){
   document.getElementById('m-sku-label').textContent = `${sku} · ${nome || ''}`;
   const e = ESTOQUE[sku] || {};
   CANAIS.forEach(c => document.getElementById(c.field).value = e[c.key] ?? '');
+  document.getElementById('m-data-lancamento').value = new Date().toISOString().slice(0,10);
   document.getElementById('m-status').textContent = '';
   document.getElementById('overlay-estoque').classList.add('open');
 }
@@ -1058,6 +1085,12 @@ async function salvarEstoque(){
   const btn = document.getElementById('btn-salvar-estoque');
   btn.disabled = true; btn.textContent = 'Salvando…';
   const statusEl = document.getElementById('m-status');
+
+  const dataEscolhida = document.getElementById('m-data-lancamento').value || new Date().toISOString().slice(0,10);
+  // Guarda o histórico como se tivesse sido lido no fim daquele dia — assim, um lançamento
+  // atrasado (ex: lançado hoje pra valer desde uma data passada) aparece certo nos fechamentos
+  // e exportações daquela data em diante, e também nas datas seguintes até a próxima sincronização.
+  const lidoEmEscolhido = new Date(dataEscolhida + 'T23:59:59Z').toISOString();
 
   try {
     for (const c of CANAIS) {
@@ -1072,7 +1105,7 @@ async function salvarEstoque(){
       if (e1) throw e1;
 
       const { error: e2 } = await sb.from('estoque_snapshots').insert({
-        sku: currentSku, canal: c.key, saldo
+        sku: currentSku, canal: c.key, saldo, lido_em: lidoEmEscolhido
       });
       if (e2) throw e2;
     }
@@ -1146,8 +1179,8 @@ async function exportarFechamento(){
   const linhas = [];
   linhas.push(['Cód Prod Emp', 'Sit.', 'CNPJ Terceiro', 'Quantidade', 'Valor Unitário', 'Valor Total', 'Descrição do Produto', '(NCM)', 'Unid Medida']);
 
-  const dataSelecionada = document.getElementById('data-cmv').value || new Date().toISOString().slice(0,10);
-  const usandoDataPassada = !!document.getElementById('data-cmv').value;
+  const dataSelecionada = document.getElementById('exp-data').value || new Date().toISOString().slice(0,10);
+  const usandoDataPassada = !!document.getElementById('exp-data').value;
 
   // Se uma data foi escolhida, busca o estoque histórico (como estava no fim daquele dia)
   // em vez do estoque ao vivo — senão o fechamento de um dia passado saía igual ao de hoje.
@@ -1162,9 +1195,12 @@ async function exportarFechamento(){
     });
   }
 
+  // CMV Contábil dos Importados também vigente na data escolhida (Nacionais continua sempre o valor atual)
+  const cmvDoPeriodo = usandoDataPassada ? calcularCmvParaData(dataSelecionada) : CMV_POR_SKU;
+
   PRODUTOS.forEach(p => {
     const estoquesDoSku = estoqueParaExportar[p.sku] || {};
-    const cmvInfo = p.tipo === 'Importado' ? CMV_POR_SKU[p.sku] : CMV_NACIONAIS[p.sku];
+    const cmvInfo = p.tipo === 'Importado' ? cmvDoPeriodo[p.sku] : CMV_NACIONAIS[p.sku];
     const valorUnitario = (cmvInfo && !isNaN(cmvInfo.valor)) ? cmvInfo.valor : 0;
 
     CANAIS.forEach(c => {
@@ -1206,11 +1242,6 @@ async function exportarFechamento(){
 
 document.getElementById('busca').addEventListener('input', render);
 document.getElementById('chk-mostrar-zerados').addEventListener('change', render);
-document.getElementById('data-cmv').addEventListener('change', () => { calcularCmvPorData(); render(); });
-document.getElementById('btn-cmv-hoje').addEventListener('click', () => {
-  document.getElementById('data-cmv').value = '';
-  calcularCmvPorData(); render();
-});
 async function sincronizarMagis5(){
   const btn = document.getElementById('btn-sync-magis5');
   btn.disabled = true; btn.textContent = 'Sincronizando…';
@@ -1388,7 +1419,14 @@ document.getElementById('btn-sync-shopee').addEventListener('click', sincronizar
 document.getElementById('btn-conectar-ml').addEventListener('click', conectarMercadoLivre);
 document.getElementById('btn-sync-ml').addEventListener('click', sincronizarML);
 document.getElementById('btn-refresh').addEventListener('click', carregarTudo);
-document.getElementById('btn-exportar').addEventListener('click', exportarFechamento);
+document.getElementById('btn-exportar').addEventListener('click', () => {
+  document.getElementById('exp-data').value = '';
+  document.getElementById('overlay-exportar').classList.add('open');
+});
+document.getElementById('btn-exportar-confirmar').addEventListener('click', async () => {
+  await exportarFechamento();
+  document.getElementById('overlay-exportar').classList.remove('open');
+});
 document.getElementById('btn-novo').addEventListener('click', () => {
   document.getElementById('p-status').textContent = '';
   document.getElementById('overlay-produto').classList.add('open');
