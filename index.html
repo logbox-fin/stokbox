@@ -716,8 +716,14 @@
         <div class="big" style="font-size:16px;">Nenhum SKU pendente</div>
         <div style="font-size:13px;">Tudo certo por enquanto.</div>
       </div>
+      <div id="lista-ignorados" style="display:none;"></div>
+      <div class="empty-state" id="ignorados-empty" style="display:none; padding:30px 10px;">
+        <div class="big" style="font-size:16px;">Nenhum SKU ignorado</div>
+        <div style="font-size:13px;">Você ainda não ignorou nenhum SKU.</div>
+      </div>
     </div>
     <div class="modal-foot">
+      <button class="ghost" id="btn-ver-ignorados">Ver ignorados</button>
       <button class="ghost" data-close>Fechar</button>
     </div>
   </div>
@@ -773,12 +779,42 @@ function toast(msg){
 }
 
 let PENDENTES = [];
+let IGNORADOS = [];
 
 async function carregarPendentes(){
   const { data, error } = await sb.from('skus_pendentes').select('*').eq('status', 'pendente').order('detectado_em', { ascending: false });
   if (error) { toast('Erro ao carregar SKUs pendentes: ' + error.message); return; }
   PENDENTES = data || [];
   document.getElementById('badge-pendentes').textContent = PENDENTES.length > 0 ? PENDENTES.length : '';
+}
+
+async function carregarIgnorados(){
+  const { data, error } = await sb.from('skus_pendentes').select('*').eq('status', 'ignorado').order('resolvido_em', { ascending: false });
+  if (error) { toast('Erro ao carregar SKUs ignorados: ' + error.message); return; }
+  IGNORADOS = data || [];
+}
+
+function renderIgnorados(){
+  const wrap = document.getElementById('lista-ignorados');
+  wrap.innerHTML = '';
+  document.getElementById('ignorados-empty').style.display = IGNORADOS.length ? 'none' : 'block';
+
+  IGNORADOS.forEach(ign => {
+    const row = document.createElement('div');
+    row.className = 'pend-row';
+    row.innerHTML = `
+      <div class="pend-info">
+        <div class="pend-sku">${ign.sku}</div>
+        <div class="pend-meta">${ign.canal} · ${ign.nome_recebido || 'sem nome'} · saldo ${ign.saldo ?? '—'}</div>
+      </div>
+      <div class="pend-actions">
+        <button data-reativar="${ign.id}">Reativar</button>
+      </div>
+    `;
+    wrap.appendChild(row);
+  });
+
+  wrap.querySelectorAll('[data-reativar]').forEach(btn => btn.addEventListener('click', () => resolverPendente(btn.dataset.reativar, 'pendente')));
 }
 
 function distanciaLevenshtein(a, b){
@@ -877,11 +913,11 @@ function renderPendentes(){
 
 async function resolverPendente(id, status, vinculadoASku, fatorConversao){
   const fator = fatorConversao && !isNaN(fatorConversao) ? Number(fatorConversao) : 1;
-  const payload = { status, resolvido_em: new Date().toISOString() };
+  const payload = { status, resolvido_em: status === 'pendente' ? null : new Date().toISOString() };
   if (vinculadoASku) { payload.vinculado_a_sku = vinculadoASku; payload.fator_conversao = fator; }
 
-  // Busca os dados do pendente antes de resolver, pra saber de qual canal re-sincronizar depois
-  const pendente = PENDENTES.find(p => p.id === id);
+  // Busca os dados do pendente/ignorado antes de resolver, pra saber de qual canal re-sincronizar depois
+  const pendente = PENDENTES.find(p => p.id === id) || IGNORADOS.find(p => p.id === id);
 
   const { error } = await sb.from('skus_pendentes').update(payload).eq('id', id);
   if (error) { toast('Erro: ' + error.message); return; }
@@ -895,9 +931,15 @@ async function resolverPendente(id, status, vinculadoASku, fatorConversao){
     await sincronizarCanal(pendente.canal);
   }
 
-  toast(status === 'ignorado' ? 'SKU ignorado' : 'SKU vinculado e estoque atualizado');
+  const mensagem = status === 'ignorado' ? 'SKU ignorado'
+    : status === 'pendente' ? 'SKU reativado — voltou pra fila de pendentes'
+    : 'SKU vinculado e estoque atualizado';
+  toast(mensagem);
+
   await carregarPendentes();
+  await carregarIgnorados();
   renderPendentes();
+  renderIgnorados();
   await carregarTudo();
 }
 
@@ -1909,9 +1951,27 @@ document.getElementById('btn-ef-salvar-fechamento').addEventListener('click', as
   renderEstoqueFuturo();
 });
 
+function mostrarPendentesOuIgnorados(mostrarIgnorados){
+  document.getElementById('lista-pendentes').style.display = mostrarIgnorados ? 'none' : 'block';
+  document.getElementById('pendentes-empty').style.display = (!mostrarIgnorados && PENDENTES.length === 0) ? 'block' : 'none';
+  document.getElementById('lista-ignorados').style.display = mostrarIgnorados ? 'block' : 'none';
+  document.getElementById('ignorados-empty').style.display = (mostrarIgnorados && IGNORADOS.length === 0) ? 'block' : 'none';
+  document.getElementById('btn-ver-ignorados').textContent = mostrarIgnorados ? 'Ver pendentes' : 'Ver ignorados';
+}
+
 document.getElementById('btn-pendentes').addEventListener('click', () => {
   renderPendentes();
+  mostrarPendentesOuIgnorados(false);
   document.getElementById('overlay-pendentes').classList.add('open');
+});
+
+document.getElementById('btn-ver-ignorados').addEventListener('click', async () => {
+  const indoPraIgnorados = document.getElementById('lista-ignorados').style.display === 'none';
+  if (indoPraIgnorados) {
+    await carregarIgnorados();
+    renderIgnorados();
+  }
+  mostrarPendentesOuIgnorados(indoPraIgnorados);
 });
 
 carregarTudo().then(async () => {
