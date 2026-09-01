@@ -1570,9 +1570,11 @@ async function rodarAuditoria(){
       confEl.innerHTML = `<div class="aud-linha ok"><span>Nenhum produto duplicado encontrado</span><span class="aud-status">✅ Tudo certo</span></div>`;
     } else {
       confEl.innerHTML = r.conflitosMagis5.map(c => {
-        const maisRecente = c.entradas.reduce((a, b) => new Date(a.dateLastUpdated) > new Date(b.dateLastUpdated) ? a : b);
+        // O Magis5 manda a data com o fuso sem minutos (ex: "-03"), que o JS não entende sozinho — normaliza antes de usar
+        const audParseData = (s) => new Date(s && /[+-]\d{2}$/.test(s) ? s + ':00' : s);
+        const maisRecente = c.entradas.reduce((a, b) => audParseData(a.dateLastUpdated) > audParseData(b.dateLastUpdated) ? a : b);
         const linhas = c.entradas.map(e => {
-          const dataFmt = new Date(e.dateLastUpdated).toLocaleDateString('pt-BR');
+          const dataFmt = audParseData(e.dateLastUpdated).toLocaleDateString('pt-BR');
           const classe = e.id === maisRecente.id ? 'mais-recente' : '';
           return `<div class="item ${classe}">${e.id === maisRecente.id ? '→' : '· '} <span class="mono">${e.id}</span> — ${e.stock} un. (atualizado ${dataFmt}${e.id === maisRecente.id ? ', mais recente' : ''})</div>`;
         }).join('');
