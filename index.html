@@ -278,6 +278,18 @@
   .aud-conflito .item{ padding:2px 0; color:var(--text-muted); }
   .aud-conflito .item.mais-recente{ color:var(--text); font-weight:600; }
 
+  .marca-filtro-wrap{ position:relative; display:inline-block; }
+  .marca-dropdown{
+    display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:20;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:0 8px 24px rgba(0,0,0,0.12); padding:10px; min-width:220px; max-height:320px; overflow-y:auto;
+  }
+  .marca-dropdown.open{ display:block; }
+  .marca-item{ display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:13px; }
+  .marca-item:hover{ background:var(--surface-2); }
+  .marca-item input{ cursor:pointer; }
+  .marca-divisor{ height:1px; background:var(--border); margin:6px 0; }
+
   .empty-state{ text-align:center; padding:60px 20px; color:var(--text-muted); }
   .empty-state .big{ font-family:'Barlow Condensed',sans-serif; font-size:22px; color:var(--text); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em; }
 
@@ -402,6 +414,17 @@
         <option value="sku">Ordenar: SKU (A-Z)</option>
         <option value="nome">Ordenar: Nome (A-Z)</option>
       </select>
+      <div class="marca-filtro-wrap">
+        <button class="ghost" id="btn-marcas">Marcas: Todas ▾</button>
+        <div class="marca-dropdown" id="marca-dropdown">
+          <label class="marca-item marca-item-todas">
+            <input type="checkbox" id="marca-todas" checked>
+            <span>Todas as marcas</span>
+          </label>
+          <div class="marca-divisor"></div>
+          <div id="marca-lista"></div>
+        </div>
+      </div>
     </div>
     <div style="text-align:right;">
       <div class="label" id="contagem">—</div>
@@ -787,6 +810,55 @@ const CANAIS = [
 
 let PRODUTOS = [];
 let canaisSelecionados = new Set(['magis5_proprio', 'mercado_livre_full', 'shopee_full', 'amazon_full']);
+let marcasSelecionadas = new Set(); // vazio = todas
+
+function renderMarcasFiltro(){
+  const marcas = [...new Set(PRODUTOS.map(p => p.marca || 'Sem marca'))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const lista = document.getElementById('marca-lista');
+  lista.innerHTML = marcas.map(m => `
+    <label class="marca-item">
+      <input type="checkbox" class="marca-check" value="${m}" ${marcasSelecionadas.has(m) ? 'checked' : ''}>
+      <span>${m}</span>
+    </label>
+  `).join('');
+
+  lista.querySelectorAll('.marca-check').forEach(chk => {
+    chk.addEventListener('change', () => {
+      if (chk.checked) marcasSelecionadas.add(chk.value);
+      else marcasSelecionadas.delete(chk.value);
+      document.getElementById('marca-todas').checked = marcasSelecionadas.size === 0;
+      atualizarLabelMarcas(marcas.length);
+      render();
+    });
+  });
+
+  atualizarLabelMarcas(marcas.length);
+}
+
+function atualizarLabelMarcas(totalMarcas){
+  const btn = document.getElementById('btn-marcas');
+  if (marcasSelecionadas.size === 0) {
+    btn.textContent = 'Marcas: Todas ▾';
+  } else if (marcasSelecionadas.size === 1) {
+    btn.textContent = `Marcas: ${[...marcasSelecionadas][0]} ▾`;
+  } else {
+    btn.textContent = `Marcas: ${marcasSelecionadas.size} selecionadas ▾`;
+  }
+}
+
+document.getElementById('btn-marcas').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('marca-dropdown').classList.toggle('open');
+});
+document.getElementById('marca-dropdown').addEventListener('click', (e) => e.stopPropagation());
+document.addEventListener('click', () => document.getElementById('marca-dropdown').classList.remove('open'));
+
+document.getElementById('marca-todas').addEventListener('change', (e) => {
+  marcasSelecionadas.clear();
+  document.querySelectorAll('.marca-check').forEach(chk => chk.checked = false);
+  atualizarLabelMarcas();
+  render();
+});
 
 function renderChips(){
   const wrap = document.getElementById('chips-canais');
@@ -1040,6 +1112,7 @@ async function carregarTudo(){
   (tipos || []).forEach(t => { ESTOQUE_TIPOS[t.canal] = { situacao: t.situacao, cnpj: t.cnpj_terceiro }; });
 
   calcularCmvPorData();
+  renderMarcasFiltro();
   render();
   renderResumo(ultima);
 }
@@ -1100,6 +1173,10 @@ function render(){
   let filtrados = PRODUTOS.filter(p =>
     !termo || p.sku.toLowerCase().includes(termo) || (p.nome||'').toLowerCase().includes(termo) || (p.marca||'').toLowerCase().includes(termo)
   );
+
+  if (marcasSelecionadas.size > 0) {
+    filtrados = filtrados.filter(p => marcasSelecionadas.has(p.marca || 'Sem marca'));
+  }
 
   // valor a considerar pra cada produto: soma só dos canais marcados nos chips
   const valorConsiderado = (p) => {
