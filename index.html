@@ -928,7 +928,18 @@ function renderIgnorados(){
     wrap.appendChild(row);
   });
 
-  wrap.querySelectorAll('[data-reativar]').forEach(btn => btn.addEventListener('click', () => resolverPendente(btn.dataset.reativar, 'pendente')));
+  wrap.querySelectorAll('[data-reativar]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ign = IGNORADOS.find(i => String(i.id) === btn.dataset.reativar);
+      const motivo = ign?.nome_recebido || 'sem motivo registrado';
+      const confirmado = confirm(
+        `Reativar "${ign?.sku}"?\n\nMotivo pelo qual foi ignorado:\n${motivo}\n\n` +
+        `Se isso foi ignorado por ser um produto duplicado/fantasma no Magis5, reativar e vincular de novo vai voltar a somar o estoque errado. Só reative se tiver certeza de que não é mais o caso.`
+      );
+      if (!confirmado) return;
+      resolverPendente(btn.dataset.reativar, 'pendente');
+    });
+  });
 }
 
 function distanciaLevenshtein(a, b){
