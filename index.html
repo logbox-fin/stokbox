@@ -469,7 +469,7 @@
   <div class="integ-card">
     <div class="integ-head">
       <h2>Mercado Livre — Full</h2>
-      <span class="integ-status ok">Conectado</span>
+      <span class="integ-status ok" id="ml-status">Conectado</span>
     </div>
     <p>Sincroniza o saldo do Full do Mercado Livre automaticamente a cada 15 minutos. Use "Conectar" se precisar reautorizar (ex: depois de mudar permissões no devcenter), e "Sincronizar agora" pra forçar uma atualização na hora.</p>
     <div style="display:flex; gap:10px;">
@@ -1531,6 +1531,33 @@ async function conectarShopee(){
   }
 }
 
+// Consulta o status real de conexão (token válido ou não) do ML e da Shopee — sem isso,
+// a tela mostrava um texto fixo que não refletia se o token realmente ainda funcionava.
+async function atualizarStatusIntegracoes(){
+  const { data: tokens } = await sb.from('oauth_tokens').select('canal, expires_at').in('canal', ['mercado_livre', 'shopee']);
+  const porCanal = {};
+  (tokens || []).forEach(t => { porCanal[t.canal] = t; });
+
+  function aplicar(elId, canal, nomeExibicao){
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const token = porCanal[canal];
+    if (!token) {
+      el.textContent = 'Não conectado';
+      el.classList.remove('ok');
+    } else if (new Date(token.expires_at) < new Date()) {
+      el.textContent = 'Token expirado — reconecte';
+      el.classList.remove('ok');
+    } else {
+      el.textContent = 'Conectado';
+      el.classList.add('ok');
+    }
+  }
+
+  aplicar('ml-status', 'mercado_livre', 'Mercado Livre');
+  aplicar('shopee-status', 'shopee', 'Shopee');
+}
+
 async function verificarCallbackShopee(){
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
@@ -1740,6 +1767,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('view-integracoes').style.display = btn.dataset.tab === 'integracoes' ? 'block' : 'none';
     document.getElementById('view-estoque-futuro').style.display = btn.dataset.tab === 'estoque-futuro' ? 'block' : 'none';
     if (btn.dataset.tab === 'estoque-futuro') renderEstoqueFuturo();
+    if (btn.dataset.tab === 'integracoes') atualizarStatusIntegracoes();
   });
 });
 
@@ -2229,6 +2257,7 @@ carregarTudo().then(async () => {
 carregarPendentes();
 verificarCallbackML();
 verificarCallbackShopee();
+atualizarStatusIntegracoes();
 renderChips();
 </script>
 </body>
