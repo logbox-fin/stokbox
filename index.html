@@ -345,9 +345,126 @@
     main{ padding:20px; }
     table{ display:block; overflow-x:auto; }
   }
+
+  /* ====== LOGIN ====== */
+  #login-screen{
+    position:fixed; inset:0; z-index:2000; background:var(--bg);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  #login-screen[hidden]{ display:none; }
+  .login-box{
+    width:100%; max-width:380px; background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; padding:32px 28px; box-shadow:0 10px 40px rgba(20,24,32,0.08);
+  }
+  .login-box .brand{ justify-content:center; margin-bottom:22px; }
+  .login-box .field input{ font-size:17px; padding:13px 14px; width:100%; }
+  .login-box button.primary{ width:100%; padding:14px; font-size:15px; margin-top:6px; }
+  .login-erro{ color:var(--danger); font-size:13px; min-height:18px; margin-bottom:8px; text-align:center; }
+  .user-chip{ display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-muted); margin-left:14px; }
+  .user-chip b{ color:var(--text); font-weight:600; }
+  .user-chip button{ padding:6px 12px; font-size:12px; }
+
+  /* ====== CONTAGEM ====== */
+  .ct-topo{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+  .ct-titulo{ font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:26px; text-transform:uppercase; letter-spacing:0.02em; }
+  .ct-sub{ font-size:13px; color:var(--text-muted); margin-top:2px; }
+  .ct-acoes{ display:flex; gap:10px; flex-wrap:wrap; }
+  .ct-vazio{
+    background:var(--surface); border:1px dashed var(--border); border-radius:var(--radius);
+    padding:48px 24px; text-align:center; color:var(--text-muted);
+  }
+  .ct-vazio p{ margin-bottom:18px; font-size:15px; }
+  .ct-vazio button{ padding:14px 26px; font-size:15px; }
+  .ct-barra{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+  .ct-barra .search{ width:min(100%,420px); font-size:16px; padding:13px 16px; }
+  .ct-progresso{ font-size:13px; color:var(--text-muted); }
+  .ct-progresso b{ color:var(--text); }
+  .ct-bloco{ margin-bottom:26px; }
+  .ct-bloco-head{
+    display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;
+    padding:10px 16px; background:var(--text); color:#fff; border-radius:var(--radius) var(--radius) 0 0;
+    font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:18px; letter-spacing:0.05em; text-transform:uppercase;
+  }
+  .ct-bloco-head small{ font-family:'Inter',sans-serif; font-weight:500; font-size:12px; opacity:.75; letter-spacing:0; text-transform:none; }
+  .ct-bloco.fechado .ct-linhas{ display:none; }
+  .ct-bloco.fechado .ct-bloco-head{ border-radius:var(--radius); }
+  .ct-linhas{ border:1px solid var(--border); border-top:none; border-radius:0 0 var(--radius) var(--radius); background:var(--surface); }
+  .ct-linha{
+    display:grid; grid-template-columns:minmax(200px,1.5fr) repeat(3,minmax(96px,120px)) minmax(210px,1.2fr);
+    gap:14px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border);
+  }
+  .ct-linha:last-child{ border-bottom:none; }
+  .ct-linha.preenchido{ background:rgba(34,147,107,0.045); }
+  .ct-prod .sku{ font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; color:var(--accent); }
+  .ct-prod .nome{ font-size:14px; font-weight:500; margin-top:2px; line-height:1.3; }
+  .ct-prod .cx{ font-size:12px; color:var(--text-muted); margin-top:3px; }
+  .ct-prod .cx.sem{ color:var(--danger); font-weight:600; }
+  .ct-prod .cfg{ display:inline-block; margin-left:8px; padding:1px 8px; font-size:11px; border-radius:6px; }
+  .ct-campo label{ display:flex; align-items:flex-end; min-height:28px; font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.04em; }
+  .ct-campo input{
+    width:100%; min-height:48px; font-size:19px; font-weight:600; text-align:center;
+    border:1.5px solid var(--border); border-radius:10px; background:var(--surface); color:var(--text);
+    font-family:'JetBrains Mono',monospace; padding:6px 8px;
+  }
+  .ct-campo input:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
+  .ct-campo input:disabled{ background:var(--surface-2); color:var(--text-faint); }
+  .ct-campo input.erro{ border-color:var(--danger); }
+  .ct-campo input.salvo{ border-color:var(--ok); }
+  .ct-calc{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .ct-calc div{ background:var(--surface-2); border-radius:8px; padding:6px 8px; text-align:center; }
+  .ct-calc span{ display:block; font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.03em; }
+  .ct-calc b{ font-family:'JetBrains Mono',monospace; font-size:16px; }
+  .ct-calc .final{ background:var(--accent-dim); }
+  .ct-calc .final b{ color:#8A5200; }
+  .ct-nada{ padding:30px; text-align:center; color:var(--text-muted); }
+  @media (max-width:860px){
+    header{ padding:14px 16px; flex-wrap:wrap; gap:10px; }
+    .tabs{ padding:0 8px; overflow-x:auto; }
+    main{ padding:18px 14px 60px; }
+    .ct-linha{ grid-template-columns:1fr 1fr 1fr; }
+    .ct-prod{ grid-column:1 / -1; }
+    .ct-calc{ grid-column:1 / -1; }
+    .ct-titulo{ font-size:22px; }
+  }
+
+  /* ====== HISTÓRICO ====== */
+  .hist-item{
+    display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px 20px; margin-bottom:10px; transition:all .15s ease;
+  }
+  .hist-item:hover{ border-color:var(--accent); background:var(--accent-dim); }
+  .hist-item .data{ font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:24px; }
+  .hist-item .meta{ font-size:12px; color:var(--text-faint); }
+  .hist-tabela{ width:100%; border-collapse:collapse; background:var(--surface); font-size:13px; }
+  .hist-tabela th, .hist-tabela td{ padding:8px 10px; border-bottom:1px solid var(--border); text-align:right; }
+  .hist-tabela th{ background:var(--surface-2); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted); }
+  .hist-tabela td:first-child, .hist-tabela th:first-child, .hist-tabela td:nth-child(2), .hist-tabela th:nth-child(2){ text-align:left; }
+  .hist-tabela td.sku{ font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--accent); white-space:nowrap; }
+  .hist-tabela tr.bloco td{ background:var(--text); color:#fff; font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; font-size:14px; text-align:left; }
+  .hist-scroll{ overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); }
 </style>
 </head>
 <body>
+
+<div id="login-screen">
+  <form class="login-box" id="login-form" autocomplete="on" style="visibility:hidden">
+    <div class="brand">
+      <img class="brand-mark" id="login-logo" alt="">
+      <h1>STOKBOX<span class="sub">Estoque consolidado</span></h1>
+    </div>
+    <div class="field">
+      <label for="login-usuario">Usuário</label>
+      <input type="text" id="login-usuario" autocomplete="username" autocapitalize="none" required>
+    </div>
+    <div class="field">
+      <label for="login-senha">Senha</label>
+      <input type="password" id="login-senha" autocomplete="current-password" required>
+    </div>
+    <div class="login-erro" id="login-erro"></div>
+    <button type="submit" class="primary" id="btn-login">Entrar</button>
+  </form>
+</div>
 
 <header>
   <div class="brand">
@@ -366,6 +483,8 @@
 <nav class="tabs">
   <button class="tab-btn" id="tab-integracoes" data-tab="integracoes">Integrações</button>
   <button class="tab-btn active" id="tab-estoque" data-tab="estoque">Estoque</button>
+  <button class="tab-btn" id="tab-contagem" data-tab="contagem">Contagem</button>
+  <button class="tab-btn" id="tab-historico" data-tab="historico">Histórico de contagens</button>
 </nav>
 
 <main>
@@ -533,6 +652,14 @@
 
 </div>
 
+
+<div id="view-contagem" style="display:none;">
+  <div id="ct-conteudo"></div>
+</div>
+
+<div id="view-historico" style="display:none;">
+  <div id="hist-conteudo"></div>
+</div>
 </main>
 
 <!-- Modal: editar estoque de um produto -->
@@ -793,6 +920,53 @@
   </div>
 </div>
 
+
+
+<div class="overlay" id="overlay-ct-nova">
+  <div class="modal" style="max-width:420px; width:95vw;">
+    <div class="modal-head">
+      <h2>Nova Contagem de Estoque</h2>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Data da contagem</label>
+        <input type="date" id="ct-nova-data" style="font-size:18px; padding:12px;">
+        <p class="hint" style="margin-top:6px;">Informe o dia em que a contagem está sendo feita.</p>
+      </div>
+      <p id="ct-nova-erro" style="color:var(--danger); font-size:13px; min-height:16px;"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="ghost" data-close>Cancelar</button>
+      <button class="primary" id="btn-ct-nova-ok">Iniciar contagem</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-ct-cfg">
+  <div class="modal" style="max-width:440px; width:95vw;">
+    <div class="modal-head">
+      <h2>Configurar produto</h2>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="ct-cfg-titulo" style="font-size:13px; margin-bottom:14px; color:var(--text-muted);"></p>
+      <div class="field">
+        <label>Quantidade por caixa</label>
+        <input type="number" id="ct-cfg-caixa" min="1" step="1" placeholder="Ex.: 20">
+      </div>
+      <div class="field">
+        <label>Onde aparece na contagem (bloco)</label>
+        <select id="ct-cfg-bloco"></select>
+      </div>
+      <p id="ct-cfg-erro" style="color:var(--danger); font-size:13px; min-height:16px;"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="ghost" data-close>Cancelar</button>
+      <button class="primary" id="btn-ct-cfg-ok">Salvar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ====== CONFIGURAÇÃO SUPABASE ======
@@ -1759,15 +1933,7 @@ document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click',
 document.getElementById('ordenar-por').addEventListener('change', render);
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('view-estoque').style.display = btn.dataset.tab === 'estoque' ? 'block' : 'none';
-    document.getElementById('view-integracoes').style.display = btn.dataset.tab === 'integracoes' ? 'block' : 'none';
-    document.getElementById('view-estoque-futuro').style.display = btn.dataset.tab === 'estoque-futuro' ? 'block' : 'none';
-    if (btn.dataset.tab === 'estoque-futuro') renderEstoqueFuturo();
-    if (btn.dataset.tab === 'integracoes') atualizarStatusIntegracoes();
-  });
+  btn.addEventListener('click', () => abrirAba(btn.dataset.tab));
 });
 
 // ====================== ESTOQUE FUTURO ======================
@@ -2249,15 +2415,498 @@ document.getElementById('btn-ver-ignorados').addEventListener('click', async () 
   mostrarPendentesOuIgnorados(indoPraIgnorados);
 });
 
-carregarTudo().then(async () => {
-  await carregarEstoqueFuturo();
-  renderChipsEF();
+
+// ====================== LOGIN / SESSÃO ======================
+const TOKEN_KEY = 'stokbox_token';
+let SESSAO = null; // { token, usuario, nome, admin, abas, edita }
+let DADOS_ESTOQUE_INICIADOS = false;
+
+const ABA_PERMISSAO = { integracoes:'sb-integracoes', estoque:'sb-estoque', contagem:'sb-contagem', historico:'sb-historico' };
+const ABAS_VIEW = {
+  integracoes:'view-integracoes', estoque:'view-estoque', 'estoque-futuro':'view-estoque-futuro',
+  contagem:'view-contagem', historico:'view-historico'
+};
+
+function temAba(a){ return !!SESSAO && (SESSAO.admin === true || (SESSAO.abas || []).includes(a)); }
+function lerToken(){ try { return localStorage.getItem(TOKEN_KEY); } catch(e){ return null; } }
+function gravarToken(t){ try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); } catch(e){} }
+async function rpc(fn, args){
+  const { data, error } = await sb.rpc(fn, args);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+function mostrarLogin(msg){
+  const tela = document.getElementById('login-screen');
+  tela.hidden = false;
+  document.getElementById('login-form').style.visibility = 'visible';
+  document.getElementById('login-erro').textContent = msg || '';
+  setTimeout(() => document.getElementById('login-usuario').focus(), 50);
+}
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btn-login');
+  const erro = document.getElementById('login-erro');
+  erro.textContent = '';
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  try {
+    const r = await rpc('imp_login', {
+      p_usuario: document.getElementById('login-usuario').value,
+      p_senha: document.getElementById('login-senha').value
+    });
+    if (!r || !r.ok) { erro.textContent = (r && r.erro) || 'Não foi possível entrar.'; return; }
+    SESSAO = r;
+    gravarToken(r.token);
+    document.getElementById('login-senha').value = '';
+    aplicarSessao();
+  } catch (err) {
+    erro.textContent = 'Erro de conexão. Tente novamente.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Entrar';
+  }
 });
-carregarPendentes();
-verificarCallbackML();
-verificarCallbackShopee();
-atualizarStatusIntegracoes();
-renderChips();
+
+async function sair(){
+  try { if (SESSAO) await rpc('imp_logout', { p_token: SESSAO.token }); } catch(e){}
+  gravarToken(null);
+  location.reload();
+}
+
+function aplicarSessao(){
+  document.getElementById('login-screen').hidden = true;
+
+  // chip do usuário no cabeçalho
+  let chip = document.getElementById('user-chip');
+  if (!chip) {
+    chip = document.createElement('div');
+    chip.id = 'user-chip';
+    chip.className = 'user-chip';
+    document.querySelector('header').appendChild(chip);
+  }
+  chip.innerHTML = '<span>Olá, <b></b></span><button class="ghost" id="btn-sair">Sair</button>';
+  chip.querySelector('b').textContent = SESSAO.nome || SESSAO.usuario;
+  document.getElementById('btn-sair').addEventListener('click', sair);
+
+  // abas permitidas
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.style.display = temAba(ABA_PERMISSAO[b.dataset.tab]) ? '' : 'none';
+  });
+  const primeira = ['estoque','contagem','historico','integracoes'].find(a => temAba(ABA_PERMISSAO[a])) || null;
+
+  // botões do cabeçalho que só fazem sentido com a aba Estoque
+  const veEstoque = temAba('sb-estoque');
+  ['btn-pendentes','btn-refresh','btn-exportar','btn-novo','btn-auditoria'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = veEstoque ? '' : 'none';
+  });
+
+  if (primeira) abrirAba(primeira);
+
+  // só carrega os dados de estoque (Magis etc.) para quem tem acesso a eles
+  if ((veEstoque || temAba('sb-integracoes')) && !DADOS_ESTOQUE_INICIADOS) {
+    DADOS_ESTOQUE_INICIADOS = true;
+    iniciarDadosEstoque();
+  }
+}
+
+function abrirAba(nome){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === nome));
+  Object.entries(ABAS_VIEW).forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (k === nome) ? 'block' : 'none';
+  });
+  if (nome === 'estoque-futuro') renderEstoqueFuturo();
+  if (nome === 'integracoes') atualizarStatusIntegracoes();
+  if (nome === 'contagem') carregarContagem();
+  if (nome === 'historico') carregarHistorico();
+}
+
+// ====================== CONTAGEM DE ESTOQUE ======================
+const CT = { contagem:null, itens:[], podeEditar:false, podeConfig:false, podeFinalizar:false, fechados:new Set(), salvando:0, cfgSku:null };
+const CT_BLOCOS_BASE = ['TIB KIDS','X-CELL / FLEX GOLD','VARIALL','BOYU CELL','THAMETAL','CABOMIX','AK ACESSÓRIOS'];
+const CT_CAMPOS = [
+  { k:'caixas_fechadas', label:'Caixas fechadas' },
+  { k:'pecas_soltas',    label:'Peças caixa aberta' },
+  { k:'full_interno',    label:'Full interno' }
+];
+
+function ctNum(v){ const n = Number(v); return (v === null || v === undefined || v === '' || isNaN(n)) ? 0 : n; }
+function ctFmt(n){ return Number(n).toLocaleString('pt-BR'); }
+function ctData(s){ if (!s) return ''; const [y,m,d] = String(s).slice(0,10).split('-'); return `${d}/${m}/${y}`; }
+function ctDataHora(s){ if (!s) return ''; const d = new Date(s); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }); }
+function ctEsc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function ctSemAcento(s){ return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+function ctPreenchido(it){ return it.caixas_fechadas != null || it.pecas_soltas != null || it.full_interno != null; }
+function ctCalc(it){
+  const q = it.qtde_caixa || 0;
+  const bruta = ctNum(it.caixas_fechadas) * q;           // 1. caixas x qtde por caixa
+  const total = bruta + ctNum(it.pecas_soltas);          // 2. (caixas x qtde por caixa) + peças soltas
+  const comp  = total + ctNum(it.full_interno);          // 3. total + full interno
+  return { bruta, total, comp };
+}
+function ctOrdenar(){
+  CT.itens.sort((a, b) => (a.bloco || '').localeCompare(b.bloco || '') || a.sku.localeCompare(b.sku));
+}
+function ctBlocos(){
+  const s = new Set(CT_BLOCOS_BASE);
+  CT.itens.forEach(i => { if (i.bloco) s.add(i.bloco); });
+  return [...s];
+}
+
+async function carregarContagem(){
+  const el = document.getElementById('ct-conteudo');
+  try {
+    const r = await rpc('ct_listar', { p_token: SESSAO.token });
+    if (!r || !r.ok) { el.innerHTML = `<div class="ct-vazio"><p>${ctEsc((r && r.erro) || 'Não foi possível carregar.')} Se o problema continuar, saia e entre de novo.</p></div>`; return; }
+    const mesmaContagem = CT.contagem && r.contagem && CT.contagem.id === r.contagem.id && el.querySelector('.ct-linha');
+    CT.contagem = r.contagem; CT.itens = r.itens;
+    CT.podeEditar = r.pode_editar; CT.podeConfig = r.pode_config; CT.podeFinalizar = r.pode_finalizar;
+    if (mesmaContagem) ctAtualizarValores(); else renderContagem();
+  } catch (err) {
+    el.innerHTML = `<div class="ct-vazio"><p>Erro de conexão. Tente novamente.</p><button class="primary" onclick="carregarContagem()">Tentar de novo</button></div>`;
+  }
+}
+
+function ctCampoHtml(it, c, bloqueado){
+  const v = it[c.k];
+  return `<div class="ct-campo"><label>${c.label}</label><input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="next" autocomplete="off" data-campo="${c.k}" value="${v == null ? '' : v}"${bloqueado ? ' disabled' : ''}></div>`;
+}
+
+function ctLinhaHtml(it){
+  const calc = ctCalc(it);
+  const semCx = !it.qtde_caixa;
+  const somenteLeitura = !CT.podeEditar;
+  return `<div class="ct-linha${ctPreenchido(it) ? ' preenchido' : ''}" data-sku="${ctEsc(it.sku)}" data-busca="${ctEsc(ctSemAcento(it.sku + ' ' + (it.nome || '')))}">
+    <div class="ct-prod">
+      <div class="sku">${ctEsc(it.sku)}${CT.podeConfig ? `<button class="ghost cfg" data-cfg="${ctEsc(it.sku)}" title="Configurar">✎</button>` : ''}</div>
+      <div class="nome">${ctEsc(it.nome || '')}</div>
+      <div class="cx${semCx ? ' sem' : ''}">${semCx ? 'Caixa não cadastrada' : 'Qtde por caixa: <b>' + ctFmt(it.qtde_caixa) + '</b>'}</div>
+    </div>
+    ${ctCampoHtml(it, CT_CAMPOS[0], somenteLeitura || semCx)}
+    ${ctCampoHtml(it, CT_CAMPOS[1], somenteLeitura)}
+    ${ctCampoHtml(it, CT_CAMPOS[2], somenteLeitura)}
+    <div class="ct-calc">
+      <div><span>Qtde bruta</span><b data-calc="bruta">${ctFmt(calc.bruta)}</b></div>
+      <div><span>Qtde total</span><b data-calc="total">${ctFmt(calc.total)}</b></div>
+      <div class="final"><span>Est. completo</span><b data-calc="comp">${ctFmt(calc.comp)}</b></div>
+    </div>
+  </div>`;
+}
+
+function renderContagem(){
+  const el = document.getElementById('ct-conteudo');
+  if (!CT.contagem) {
+    el.innerHTML = `<div class="ct-topo"><div><div class="ct-titulo">Contagem de estoque</div><div class="ct-sub">Nenhuma contagem em andamento.</div></div></div>
+      <div class="ct-vazio"><p>${CT.podeEditar ? 'Para começar, clique no botão abaixo e informe a data da contagem.' : 'Não há contagem aberta no momento.'}</p>
+      ${CT.podeEditar ? '<button class="primary" id="btn-ct-nova">Nova Contagem de Estoque</button>' : ''}</div>`;
+    return;
+  }
+  const blocos = [];
+  CT.itens.forEach(it => {
+    let b = blocos[blocos.length - 1];
+    if (!b || b.nome !== it.bloco) { b = { nome: it.bloco, itens: [] }; blocos.push(b); }
+    b.itens.push(it);
+  });
+  el.innerHTML = `
+    <div class="ct-topo">
+      <div>
+        <div class="ct-titulo">Contagem de ${ctData(CT.contagem.data)}</div>
+        <div class="ct-sub">Em andamento · aberta por ${ctEsc(CT.contagem.criada_por || '')} · os valores são salvos automaticamente</div>
+      </div>
+      <div class="ct-acoes">
+        <button class="ghost" id="btn-ct-atualizar">Atualizar lista</button>
+        ${CT.podeFinalizar ? '<button class="primary" id="btn-ct-finalizar">Apuração Finalizada</button>' : ''}
+      </div>
+    </div>
+    <div class="ct-barra">
+      <input class="search" id="ct-busca" type="search" placeholder="Pesquisar SKU ou nome do produto..." autocomplete="off">
+      <span class="ct-progresso" id="ct-progresso"></span>
+    </div>
+    <div id="ct-lista">
+      ${blocos.map(b => `<div class="ct-bloco${CT.fechados.has(b.nome) ? ' fechado' : ''}" data-bloco="${ctEsc(b.nome)}">
+        <div class="ct-bloco-head" data-toggle="${ctEsc(b.nome)}"><span>${ctEsc(b.nome)}</span><small>${b.itens.length} produto(s)</small></div>
+        <div class="ct-linhas">${b.itens.map(ctLinhaHtml).join('')}</div>
+      </div>`).join('')}
+    </div>
+    <div class="ct-nada" id="ct-nada" style="display:none;">Nenhum produto encontrado para essa pesquisa.</div>`;
+  ctAtualizarProgresso();
+}
+
+function ctAtualizarProgresso(){
+  const p = document.getElementById('ct-progresso');
+  if (!p) return;
+  const feitos = CT.itens.filter(ctPreenchido).length;
+  p.innerHTML = `Lançados: <b>${feitos}</b> de <b>${CT.itens.length}</b> produtos`;
+}
+
+function ctAtualizarLinha(tr, it){
+  const calc = ctCalc(it);
+  tr.querySelector('[data-calc="bruta"]').textContent = ctFmt(calc.bruta);
+  tr.querySelector('[data-calc="total"]').textContent = ctFmt(calc.total);
+  tr.querySelector('[data-calc="comp"]').textContent = ctFmt(calc.comp);
+  tr.classList.toggle('preenchido', ctPreenchido(it));
+}
+
+// atualiza os valores na tela sem refazer tudo (não atrapalha quem está digitando)
+function ctAtualizarValores(){
+  document.querySelectorAll('#ct-lista .ct-linha').forEach(tr => {
+    const it = CT.itens.find(i => i.sku === tr.dataset.sku);
+    if (!it) return;
+    tr.querySelectorAll('input[data-campo]').forEach(inp => {
+      if (document.activeElement === inp) return;
+      const v = it[inp.dataset.campo];
+      inp.value = v == null ? '' : v;
+    });
+    ctAtualizarLinha(tr, it);
+  });
+  ctAtualizarProgresso();
+}
+
+function ctFiltrar(){
+  const q = ctSemAcento((document.getElementById('ct-busca') || {}).value || '').trim();
+  let visiveis = 0;
+  document.querySelectorAll('#ct-lista .ct-bloco').forEach(bl => {
+    let n = 0;
+    bl.querySelectorAll('.ct-linha').forEach(tr => {
+      const mostra = !q || tr.dataset.busca.includes(q);
+      tr.style.display = mostra ? '' : 'none';
+      if (mostra) n++;
+    });
+    bl.style.display = n ? '' : 'none';
+    if (q && n) bl.classList.remove('fechado');
+    visiveis += n;
+  });
+  const nada = document.getElementById('ct-nada');
+  if (nada) nada.style.display = visiveis ? 'none' : 'block';
+}
+
+async function ctSalvar(inp){
+  const tr = inp.closest('.ct-linha');
+  const it = CT.itens.find(i => i.sku === tr.dataset.sku);
+  if (!it || !CT.contagem) return;
+  const campo = inp.dataset.campo;
+  const txt = inp.value.trim();
+  const valor = txt === '' ? null : Number(txt);
+  CT.salvando++;
+  try {
+    const r = await rpc('ct_salvar', { p_token: SESSAO.token, p_contagem: CT.contagem.id, p_sku: it.sku, p_campo: campo, p_valor: valor });
+    if (!r || !r.ok) throw new Error((r && r.erro) || 'erro');
+    inp.classList.remove('erro'); inp.classList.add('salvo');
+    setTimeout(() => inp.classList.remove('salvo'), 1200);
+  } catch (e) {
+    inp.classList.add('erro');
+    toast('Não foi possível salvar ' + it.sku + ': ' + e.message);
+  } finally {
+    CT.salvando--;
+  }
+}
+
+const ctEl = document.getElementById('ct-conteudo');
+
+ctEl.addEventListener('input', (e) => {
+  const inp = e.target;
+  if (inp.id === 'ct-busca') { ctFiltrar(); return; }
+  if (!inp.dataset || !inp.dataset.campo) return;
+  const limpo = inp.value.replace(/\D/g, '');
+  if (limpo !== inp.value) inp.value = limpo;
+  const tr = inp.closest('.ct-linha');
+  const it = CT.itens.find(i => i.sku === tr.dataset.sku);
+  it[inp.dataset.campo] = limpo === '' ? null : Number(limpo);
+  inp.classList.remove('erro');
+  ctAtualizarLinha(tr, it);
+  ctAtualizarProgresso();
+});
+
+ctEl.addEventListener('change', (e) => {
+  if (e.target.dataset && e.target.dataset.campo) ctSalvar(e.target);
+});
+
+ctEl.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || !(e.target.dataset && e.target.dataset.campo)) return;
+  e.preventDefault();
+  const todos = [...document.querySelectorAll('#ct-lista .ct-linha:not([style*="display: none"]) input[data-campo]:not(:disabled)')];
+  const i = todos.indexOf(e.target);
+  e.target.blur();
+  if (i >= 0 && todos[i + 1]) todos[i + 1].focus();
+});
+
+ctEl.addEventListener('click', (e) => {
+  const t = e.target;
+  const head = t.closest('[data-toggle]');
+  if (head) {
+    const nome = head.dataset.toggle;
+    const bl = head.closest('.ct-bloco');
+    if (CT.fechados.has(nome)) { CT.fechados.delete(nome); bl.classList.remove('fechado'); }
+    else { CT.fechados.add(nome); bl.classList.add('fechado'); }
+    return;
+  }
+  const cfg = t.closest('[data-cfg]');
+  if (cfg) { ctAbrirConfig(cfg.dataset.cfg); return; }
+  if (t.id === 'btn-ct-nova') ctAbrirNova();
+  if (t.id === 'btn-ct-atualizar') { carregarContagem(); toast('Lista atualizada.'); }
+  if (t.id === 'btn-ct-finalizar') ctFinalizar();
+});
+
+function ctAbrirNova(){
+  document.getElementById('ct-nova-data').value = new Date().toLocaleDateString('en-CA');
+  document.getElementById('ct-nova-erro').textContent = '';
+  document.getElementById('overlay-ct-nova').classList.add('open');
+}
+
+document.getElementById('btn-ct-nova-ok').addEventListener('click', async () => {
+  const data = document.getElementById('ct-nova-data').value;
+  const erro = document.getElementById('ct-nova-erro');
+  if (!data) { erro.textContent = 'Informe a data da contagem.'; return; }
+  try {
+    const r = await rpc('ct_nova', { p_token: SESSAO.token, p_data: data });
+    if (!r || !r.ok) { erro.textContent = (r && r.erro) || 'Erro.'; if (r && /andamento/.test(r.erro || '')) carregarContagem(); return; }
+    document.getElementById('overlay-ct-nova').classList.remove('open');
+    CT.contagem = null;
+    await carregarContagem();
+  } catch (e) { erro.textContent = 'Erro de conexão.'; }
+});
+
+async function ctFinalizar(){
+  if (!CT.contagem) return;
+  const faltam = CT.itens.filter(i => !ctPreenchido(i)).length;
+  let msg = `Finalizar a contagem de ${ctData(CT.contagem.data)}?\n\nDepois de finalizada ela vai para o Histórico e não pode mais ser alterada.`;
+  if (faltam) msg += `\n\nAtenção: ${faltam} produto(s) ainda não foram lançados e ficarão em branco.`;
+  if (CT.salvando > 0) { toast('Aguarde um instante, ainda salvando...'); return; }
+  if (!confirm(msg)) return;
+  try {
+    const r = await rpc('ct_finalizar', { p_token: SESSAO.token, p_contagem: CT.contagem.id });
+    if (!r || !r.ok) { toast((r && r.erro) || 'Não foi possível finalizar.'); return; }
+    toast('Apuração finalizada. A contagem foi para o Histórico.');
+    CT.contagem = null;
+    await carregarContagem();
+  } catch (e) { toast('Erro de conexão ao finalizar.'); }
+}
+
+function ctAbrirConfig(sku){
+  const it = CT.itens.find(i => i.sku === sku);
+  if (!it) return;
+  CT.cfgSku = sku;
+  document.getElementById('ct-cfg-titulo').textContent = sku + ' — ' + (it.nome || '');
+  document.getElementById('ct-cfg-caixa').value = it.qtde_caixa || '';
+  document.getElementById('ct-cfg-bloco').innerHTML = ctBlocos().map(b => `<option value="${ctEsc(b)}"${b === it.bloco ? ' selected' : ''}>${ctEsc(b)}</option>`).join('');
+  document.getElementById('ct-cfg-erro').textContent = '';
+  document.getElementById('overlay-ct-cfg').classList.add('open');
+}
+
+document.getElementById('btn-ct-cfg-ok').addEventListener('click', async () => {
+  const it = CT.itens.find(i => i.sku === CT.cfgSku);
+  const erro = document.getElementById('ct-cfg-erro');
+  if (!it) return;
+  const txt = document.getElementById('ct-cfg-caixa').value.trim();
+  const cx = txt === '' ? null : parseInt(txt, 10);
+  if (cx !== null && (!(cx > 0))) { erro.textContent = 'A quantidade por caixa precisa ser maior que zero.'; return; }
+  const bloco = document.getElementById('ct-cfg-bloco').value;
+  try {
+    const r = await rpc('ct_config_salvar', { p_token: SESSAO.token, p_sku: it.sku, p_qtde_caixa: cx, p_bloco: bloco });
+    if (!r || !r.ok) { erro.textContent = (r && r.erro) || 'Erro.'; return; }
+    it.qtde_caixa = cx; it.bloco = bloco;
+    ctOrdenar();
+    document.getElementById('overlay-ct-cfg').classList.remove('open');
+    renderContagem();
+    toast('Produto atualizado.');
+  } catch (e) { erro.textContent = 'Erro de conexão.'; }
+});
+
+// vê o que os colegas lançaram (só quando ninguém está digitando)
+setInterval(() => {
+  const view = document.getElementById('view-contagem');
+  if (!SESSAO || !view || view.style.display === 'none' || !CT.contagem) return;
+  const ativo = document.activeElement;
+  if (ativo && ativo.dataset && ativo.dataset.campo) return;
+  if (CT.salvando > 0 || document.querySelector('#ct-lista input.erro')) return;
+  carregarContagem();
+}, 20000);
+
+// ====================== HISTÓRICO DE CONTAGENS ======================
+let HIST_DETALHE = null;
+
+async function carregarHistorico(){
+  const el = document.getElementById('hist-conteudo');
+  HIST_DETALHE = null;
+  try {
+    const r = await rpc('ct_historico', { p_token: SESSAO.token });
+    if (!r || !r.ok) { el.innerHTML = `<div class="ct-vazio"><p>${ctEsc((r && r.erro) || 'Sem acesso.')}</p></div>`; return; }
+    if (!r.lista.length) { el.innerHTML = `<div class="ct-topo"><div class="ct-titulo">Histórico de contagens</div></div><div class="ct-vazio"><p>Nenhuma contagem finalizada ainda.</p></div>`; return; }
+    el.innerHTML = `<div class="ct-topo"><div><div class="ct-titulo">Histórico de contagens</div><div class="ct-sub">Clique em uma data para ver o detalhe.</div></div></div>` +
+      r.lista.map(c => `<div class="hist-item" data-hist="${ctEsc(c.id)}"><div class="data">${ctData(c.data)}</div><div class="meta">Finalizada em ${ctDataHora(c.finalizada_em)}${c.por ? ' por ' + ctEsc(c.por) : ''}</div></div>`).join('');
+  } catch (e) {
+    el.innerHTML = `<div class="ct-vazio"><p>Erro de conexão.</p><button class="primary" onclick="carregarHistorico()">Tentar de novo</button></div>`;
+  }
+}
+
+async function abrirDetalheHist(id){
+  const el = document.getElementById('hist-conteudo');
+  el.innerHTML = '<div class="ct-vazio"><p>Carregando...</p></div>';
+  try {
+    const r = await rpc('ct_detalhe', { p_token: SESSAO.token, p_contagem: id });
+    if (!r || !r.ok || !r.contagem) { el.innerHTML = `<div class="ct-vazio"><p>${ctEsc((r && r.erro) || 'Contagem não encontrada.')}</p></div>`; return; }
+    HIST_DETALHE = r;
+    let linhas = '', blocoAtual = null;
+    r.itens.forEach(it => {
+      if (it.bloco !== blocoAtual) { blocoAtual = it.bloco; linhas += `<tr class="bloco"><td colspan="9">${ctEsc(blocoAtual || '')}</td></tr>`; }
+      const c = ctCalc(it);
+      linhas += `<tr><td class="sku">${ctEsc(it.sku)}</td><td>${ctEsc(it.nome || '')}</td><td>${it.qtde_caixa ? ctFmt(it.qtde_caixa) : '—'}</td><td>${ctFmt(ctNum(it.caixas_fechadas))}</td><td>${ctFmt(c.bruta)}</td><td>${ctFmt(ctNum(it.pecas_soltas))}</td><td>${ctFmt(c.total)}</td><td>${ctFmt(ctNum(it.full_interno))}</td><td><b>${ctFmt(c.comp)}</b></td></tr>`;
+    });
+    el.innerHTML = `<div class="ct-topo">
+        <div><div class="ct-titulo">Contagem de ${ctData(r.contagem.data)}</div><div class="ct-sub">Finalizada em ${ctDataHora(r.contagem.finalizada_em)}${r.contagem.por ? ' por ' + ctEsc(r.contagem.por) : ''}</div></div>
+        <div class="ct-acoes"><button class="ghost" id="btn-hist-voltar">← Voltar</button><button class="primary" id="btn-hist-excel">Baixar em Excel</button></div>
+      </div>
+      <div class="hist-scroll"><table class="hist-tabela"><thead><tr><th>SKU</th><th>Produto</th><th>Qtde/caixa</th><th>Caixas fechadas</th><th>Qtde bruta</th><th>Peças cx aberta</th><th>Qtde total</th><th>Full interno</th><th>Est. completo</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
+  } catch (e) { el.innerHTML = '<div class="ct-vazio"><p>Erro de conexão.</p></div>'; }
+}
+
+function exportarDetalheHist(){
+  if (!HIST_DETALHE) return;
+  const cab = ['Bloco','SKU','Produto','Qtde por caixa','Caixas fechadas','Qtde bruta','Peças caixa aberta','Qtde total','Full interno','Estoque completo'];
+  const linhas = HIST_DETALHE.itens.map(it => {
+    const c = ctCalc(it);
+    return [it.bloco || '', it.sku, it.nome || '', it.qtde_caixa || '', ctNum(it.caixas_fechadas), c.bruta, ctNum(it.pecas_soltas), c.total, ctNum(it.full_interno), c.comp];
+  });
+  const ws = XLSX.utils.aoa_to_sheet([cab, ...linhas]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Contagem');
+  XLSX.writeFile(wb, `contagem_${String(HIST_DETALHE.contagem.data).slice(0,10)}.xlsx`);
+}
+
+document.getElementById('hist-conteudo').addEventListener('click', (e) => {
+  const item = e.target.closest('[data-hist]');
+  if (item) { abrirDetalheHist(item.dataset.hist); return; }
+  if (e.target.id === 'btn-hist-voltar') carregarHistorico();
+  if (e.target.id === 'btn-hist-excel') exportarDetalheHist();
+});
+
+// ====================== INICIALIZAÇÃO ======================
+function iniciarDadosEstoque(){
+  carregarTudo().then(async () => {
+    await carregarEstoqueFuturo();
+    renderChipsEF();
+  });
+  carregarPendentes();
+  verificarCallbackML();
+  verificarCallbackShopee();
+  atualizarStatusIntegracoes();
+  renderChips();
+}
+
+(async function bootstrap(){
+  document.getElementById('login-logo').src = document.querySelector('header .brand-mark').src;
+  const t = lerToken();
+  if (t) {
+    try {
+      const r = await rpc('imp_validar_sessao', { p_token: t });
+      if (r && r.ok) { SESSAO = Object.assign({}, r, { token: t }); aplicarSessao(); return; }
+    } catch (e) {}
+    gravarToken(null);
+  }
+  mostrarLogin();
+})();
+
 </script>
 </body>
 </html>
