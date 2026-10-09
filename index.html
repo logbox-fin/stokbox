@@ -443,6 +443,14 @@
   .hist-tabela td.sku{ font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--accent); white-space:nowrap; }
   .hist-tabela tr.bloco td{ background:var(--text); color:#fff; font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; font-size:14px; text-align:left; }
   .hist-scroll{ overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); }
+
+  .val-pill{ display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; }
+  .val-ok{ background:rgba(34,147,107,0.14); color:#16714f; }
+  .val-atencao{ background:rgba(230,170,20,0.22); color:#8a6000; }
+  .val-diverg{ background:rgba(199,68,46,0.15); color:#a8321f; }
+  .val-semmagis{ background:var(--surface-3); color:var(--text-muted); }
+  .val-resumo{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+  .hist-quem{ font-size:13px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); }
 </style>
 </head>
 <body>
@@ -951,6 +959,11 @@
     </div>
     <div class="modal-body">
       <p id="ct-cfg-titulo" style="font-size:13px; margin-bottom:14px; color:var(--text-muted);"></p>
+      <div class="field">
+        <label>Nome do produto na contagem</label>
+        <input type="text" id="ct-cfg-nome" maxlength="120" placeholder="Nome que aparece na contagem">
+        <p class="hint" style="margin-top:6px;" id="ct-cfg-nome-orig"></p>
+      </div>
       <div class="field">
         <label>Quantidade por caixa</label>
         <input type="number" id="ct-cfg-caixa" min="1" step="1" placeholder="Ex.: 20">
@@ -2789,6 +2802,8 @@ function ctAbrirConfig(sku){
   CT.cfgSku = sku;
   document.getElementById('ct-cfg-titulo').textContent = sku + ' — ' + (it.nome || '');
   document.getElementById('ct-cfg-caixa').value = it.qtde_caixa || '';
+  document.getElementById('ct-cfg-nome').value = it.nome || '';
+  document.getElementById('ct-cfg-nome-orig').textContent = 'Nome original do cadastro (não muda): ' + (it.nome_original || '');
   document.getElementById('ct-cfg-bloco').innerHTML = ctBlocos().map(b => `<option value="${ctEsc(b)}"${b === it.bloco ? ' selected' : ''}>${ctEsc(b)}</option>`).join('');
   document.getElementById('ct-cfg-erro').textContent = '';
   document.getElementById('overlay-ct-cfg').classList.add('open');
@@ -2803,9 +2818,11 @@ document.getElementById('btn-ct-cfg-ok').addEventListener('click', async () => {
   if (cx !== null && (!(cx > 0))) { erro.textContent = 'A quantidade por caixa precisa ser maior que zero.'; return; }
   const bloco = document.getElementById('ct-cfg-bloco').value;
   try {
-    const r = await rpc('ct_config_salvar', { p_token: SESSAO.token, p_sku: it.sku, p_qtde_caixa: cx, p_bloco: bloco });
+    const nomeDigitado = document.getElementById('ct-cfg-nome').value.trim();
+    const r = await rpc('ct_config_salvar', { p_token: SESSAO.token, p_sku: it.sku, p_qtde_caixa: cx, p_bloco: bloco, p_nome: nomeDigitado });
     if (!r || !r.ok) { erro.textContent = (r && r.erro) || 'Erro.'; return; }
     it.qtde_caixa = cx; it.bloco = bloco;
+    it.nome = nomeDigitado || it.nome_original;
     ctOrdenar();
     document.getElementById('overlay-ct-cfg').classList.remove('open');
     renderContagem();
@@ -2840,6 +2857,69 @@ async function carregarHistorico(){
   }
 }
 
+let HIST_SO_DIVERGENTES = false;
+
+// validação: qtde total da contagem x Magis (guardado no momento da finalização)
+function histValida(it){
+  const total = ctCalc(it).total;
+  const m = it.magis;
+  if (m === null || m === undefined) return { status:'semmagis', dif:null, pct:null, total, magis:null };
+  const dif = total - Number(m);
+  let pct;
+  if (Number(m) === 0) pct = (total === 0) ? 0 : Infinity;
+  else pct = dif / Number(m);
+  const abs = Math.abs(pct);
+  const status = abs <= 0.025 ? 'ok' : (abs <= 0.10 ? 'atencao' : 'diverg');
+  return { status, dif, pct, total, magis:Number(m) };
+}
+function histPct(v){
+  if (v.pct === null) return '—';
+  if (!isFinite(v.pct)) return '∞';
+  return (v.pct * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
+}
+function histConferido(it, v){
+  if (it.conferido_origem === 'contagem') return v.total;
+  if (it.conferido_origem === 'magis') return v.magis;
+  return null;
+}
+const HIST_STATUS_TXT = { ok:'OK', atencao:'Atenção', diverg:'Divergente', semmagis:'Sem Magis' };
+
+function renderDetalheHist(){
+  const r = HIST_DETALHE;
+  const el = document.getElementById('hist-conteudo');
+  const cont = { ok:0, atencao:0, diverg:0, semmagis:0 };
+  r.itens.forEach(it => { cont[histValida(it).status]++; });
+  let linhas = '', blocoAtual = null, mostradas = 0;
+  r.itens.forEach(it => {
+    const v = histValida(it);
+    if (HIST_SO_DIVERGENTES && (v.status === 'ok' || v.status === 'semmagis')) return;
+    mostradas++;
+    if (it.bloco !== blocoAtual) { blocoAtual = it.bloco; linhas += `<tr class="bloco"><td colspan="14">${ctEsc(blocoAtual || '')}</td></tr>`; }
+    const c = ctCalc(it);
+    const conf = histConferido(it, v);
+    const seletor = r.pode_conferir
+      ? `<select class="hist-quem" data-conferir="${ctEsc(it.sku)}"><option value="">—</option><option value="contagem"${it.conferido_origem === 'contagem' ? ' selected' : ''}>Contagem</option><option value="magis"${it.conferido_origem === 'magis' ? ' selected' : ''}>Magis</option></select>`
+      : (it.conferido_origem === 'contagem' ? 'Contagem' : it.conferido_origem === 'magis' ? 'Magis' : '—');
+    linhas += `<tr data-sku="${ctEsc(it.sku)}"><td class="sku">${ctEsc(it.sku)}</td><td>${ctEsc(it.nome || '')}</td><td>${it.qtde_caixa ? ctFmt(it.qtde_caixa) : '—'}</td><td>${ctFmt(ctNum(it.caixas_fechadas))}</td><td>${ctFmt(c.bruta)}</td><td>${ctFmt(ctNum(it.pecas_soltas))}</td><td><b>${ctFmt(c.total)}</b></td><td>${ctFmt(ctNum(it.full_interno))}</td><td>${ctFmt(c.comp)}</td>`
+      + `<td>${v.magis === null ? '—' : ctFmt(v.magis)}</td><td><span class="val-pill val-${v.status}" title="${HIST_STATUS_TXT[v.status]}">${v.dif === null ? '—' : (v.dif > 0 ? '+' : '') + ctFmt(v.dif)} · ${histPct(v)}</span></td>`
+      + `<td>${seletor}</td><td class="td-conferido"><b>${conf === null ? '—' : ctFmt(conf)}</b></td></tr>`;
+  });
+  if (!mostradas) linhas = `<tr><td colspan="13" style="text-align:center; padding:26px; color:var(--text-muted);">Nenhum produto divergente nesta contagem.</td></tr>`;
+  el.innerHTML = `<div class="ct-topo">
+      <div><div class="ct-titulo">Contagem de ${ctData(r.contagem.data)}</div><div class="ct-sub">Finalizada em ${ctDataHora(r.contagem.finalizada_em)}${r.contagem.por ? ' por ' + ctEsc(r.contagem.por) : ''} · validação: qtde total x Magis no momento da finalização</div></div>
+      <div class="ct-acoes"><button class="ghost" id="btn-hist-voltar">← Voltar</button><button class="primary" id="btn-hist-excel">Baixar em Excel</button></div>
+    </div>
+    <div class="val-resumo">
+      <span class="val-pill val-ok">OK: ${cont.ok}</span>
+      <span class="val-pill val-atencao">Atenção: ${cont.atencao}</span>
+      <span class="val-pill val-diverg">Divergente: ${cont.diverg}</span>
+      <span class="val-pill val-semmagis">Sem Magis: ${cont.semmagis}</span>
+      <label class="toggle-check" style="margin-left:auto;"><input type="checkbox" id="hist-so-div"${HIST_SO_DIVERGENTES ? ' checked' : ''}> Ver só divergentes (amarelo e vermelho)</label>
+    </div>
+    <p class="hint" style="margin:0 0 10px; font-size:12px; color:var(--text-muted);">Verde: até 2,5% de diferença · Amarelo: até 10% · Vermelho: acima de 10%. Em "Quem está certo?", escolha qual número vale: o escolhido vira o total conferido.</p>
+    <div class="hist-scroll"><table class="hist-tabela"><thead><tr><th>SKU</th><th>Produto</th><th>Qtde/caixa</th><th>Caixas fechadas</th><th>Qtde bruta</th><th>Peças cx aberta</th><th>Qtde total</th><th>Full interno</th><th>Est. completo</th><th>Magis</th><th>Dif. (total − Magis)</th><th>Quem está certo?</th><th>Total conferido</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
+}
+
 async function abrirDetalheHist(id){
   const el = document.getElementById('hist-conteudo');
   el.innerHTML = '<div class="ct-vazio"><p>Carregando...</p></div>';
@@ -2847,32 +2927,45 @@ async function abrirDetalheHist(id){
     const r = await rpc('ct_detalhe', { p_token: SESSAO.token, p_contagem: id });
     if (!r || !r.ok || !r.contagem) { el.innerHTML = `<div class="ct-vazio"><p>${ctEsc((r && r.erro) || 'Contagem não encontrada.')}</p></div>`; return; }
     HIST_DETALHE = r;
-    let linhas = '', blocoAtual = null;
-    r.itens.forEach(it => {
-      if (it.bloco !== blocoAtual) { blocoAtual = it.bloco; linhas += `<tr class="bloco"><td colspan="9">${ctEsc(blocoAtual || '')}</td></tr>`; }
-      const c = ctCalc(it);
-      linhas += `<tr><td class="sku">${ctEsc(it.sku)}</td><td>${ctEsc(it.nome || '')}</td><td>${it.qtde_caixa ? ctFmt(it.qtde_caixa) : '—'}</td><td>${ctFmt(ctNum(it.caixas_fechadas))}</td><td>${ctFmt(c.bruta)}</td><td>${ctFmt(ctNum(it.pecas_soltas))}</td><td>${ctFmt(c.total)}</td><td>${ctFmt(ctNum(it.full_interno))}</td><td><b>${ctFmt(c.comp)}</b></td></tr>`;
-    });
-    el.innerHTML = `<div class="ct-topo">
-        <div><div class="ct-titulo">Contagem de ${ctData(r.contagem.data)}</div><div class="ct-sub">Finalizada em ${ctDataHora(r.contagem.finalizada_em)}${r.contagem.por ? ' por ' + ctEsc(r.contagem.por) : ''}</div></div>
-        <div class="ct-acoes"><button class="ghost" id="btn-hist-voltar">← Voltar</button><button class="primary" id="btn-hist-excel">Baixar em Excel</button></div>
-      </div>
-      <div class="hist-scroll"><table class="hist-tabela"><thead><tr><th>SKU</th><th>Produto</th><th>Qtde/caixa</th><th>Caixas fechadas</th><th>Qtde bruta</th><th>Peças cx aberta</th><th>Qtde total</th><th>Full interno</th><th>Est. completo</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
+    renderDetalheHist();
   } catch (e) { el.innerHTML = '<div class="ct-vazio"><p>Erro de conexão.</p></div>'; }
 }
 
 function exportarDetalheHist(){
   if (!HIST_DETALHE) return;
-  const cab = ['Bloco','SKU','Produto','Qtde por caixa','Caixas fechadas','Qtde bruta','Peças caixa aberta','Qtde total','Full interno','Estoque completo'];
+  const cab = ['Bloco','SKU','Produto','Qtde por caixa','Caixas fechadas','Qtde bruta','Peças caixa aberta','Qtde total','Full interno','Estoque completo','Magis','Diferença (total - Magis)','Diferença %','Situação','Quem está certo?','Total conferido'];
   const linhas = HIST_DETALHE.itens.map(it => {
-    const c = ctCalc(it);
-    return [it.bloco || '', it.sku, it.nome || '', it.qtde_caixa || '', ctNum(it.caixas_fechadas), c.bruta, ctNum(it.pecas_soltas), c.total, ctNum(it.full_interno), c.comp];
+    const c = ctCalc(it), v = histValida(it), conf = histConferido(it, v);
+    return [it.bloco || '', it.sku, it.nome || '', it.qtde_caixa || '', ctNum(it.caixas_fechadas), c.bruta, ctNum(it.pecas_soltas), c.total, ctNum(it.full_interno), c.comp,
+      v.magis === null ? '' : v.magis, v.dif === null ? '' : v.dif, v.pct === null ? '' : (isFinite(v.pct) ? Math.round(v.pct * 1000) / 1000 : 'n/d'), HIST_STATUS_TXT[v.status],
+      it.conferido_origem === 'contagem' ? 'Contagem' : it.conferido_origem === 'magis' ? 'Magis' : '', conf === null ? '' : conf];
   });
   const ws = XLSX.utils.aoa_to_sheet([cab, ...linhas]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Contagem');
   XLSX.writeFile(wb, `contagem_${String(HIST_DETALHE.contagem.data).slice(0,10)}.xlsx`);
 }
+
+document.getElementById('hist-conteudo').addEventListener('change', async (e) => {
+  const t = e.target;
+  if (t.id === 'hist-so-div') { HIST_SO_DIVERGENTES = t.checked; renderDetalheHist(); return; }
+  if (t.dataset && t.dataset.conferir && HIST_DETALHE) {
+    const sku = t.dataset.conferir;
+    const it = HIST_DETALHE.itens.find(i => i.sku === sku);
+    const origem = t.value || null;
+    try {
+      const r = await rpc('ct_conferir', { p_token: SESSAO.token, p_contagem: HIST_DETALHE.contagem.id, p_sku: sku, p_origem: origem });
+      if (!r || !r.ok) throw new Error((r && r.erro) || 'erro');
+      it.conferido_origem = origem;
+      const tr = t.closest('tr');
+      const conf = histConferido(it, histValida(it));
+      tr.querySelector('.td-conferido').innerHTML = `<b>${conf === null ? '—' : ctFmt(conf)}</b>`;
+    } catch (err) {
+      toast('Não foi possível salvar: ' + err.message);
+      t.value = it.conferido_origem || '';
+    }
+  }
+});
 
 document.getElementById('hist-conteudo').addEventListener('click', (e) => {
   const item = e.target.closest('[data-hist]');
