@@ -394,13 +394,14 @@
     gap:14px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border);
   }
   .ct-linha:last-child{ border-bottom:none; }
-  .ct-linha.preenchido{ background:rgba(34,147,107,0.045); }
+  .ct-linha:nth-child(even){ background:rgba(20,24,32,0.025); }
+  .ct-linha.preenchido, .ct-linha.preenchido:nth-child(even){ background:rgba(34,147,107,0.07); }
   .ct-prod .sku{ font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; color:var(--accent); }
   .ct-prod .nome{ font-size:14px; font-weight:500; margin-top:2px; line-height:1.3; }
   .ct-prod .cx{ font-size:12px; color:var(--text-muted); margin-top:3px; }
   .ct-prod .cx.sem{ color:var(--danger); font-weight:600; }
   .ct-prod .cfg{ display:inline-block; margin-left:8px; padding:1px 8px; font-size:11px; border-radius:6px; }
-  .ct-campo label{ display:flex; align-items:flex-end; min-height:28px; font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.04em; }
+  .ct-campo label{ display:flex; align-items:flex-end; min-height:28px; white-space:nowrap; font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.04em; }
   .ct-campo input{
     width:100%; min-height:48px; font-size:19px; font-weight:600; text-align:center;
     border:1.5px solid var(--border); border-radius:10px; background:var(--surface); color:var(--text);
@@ -410,6 +411,21 @@
   .ct-campo input:disabled{ background:var(--surface-2); color:var(--text-faint); }
   .ct-campo input.erro{ border-color:var(--danger); }
   .ct-campo input.salvo{ border-color:var(--ok); }
+  /* cores por coluna: azul = caixas fechadas, verde = peças abertas, amarelo = full interno */
+  .ct-campo.c-azul label{ color:#1D5FA8; }
+  .ct-campo.c-azul input{ background:#E6F0FB; border-color:#8DB6E3; }
+  .ct-campo.c-verde label{ color:#1B7A4F; }
+  .ct-campo.c-verde input{ background:#E4F5EC; border-color:#8FD0AE; }
+  .ct-campo.c-amarelo label{ color:#8A6A00; }
+  .ct-campo.c-amarelo input{ background:#FFF6CF; border-color:#E6CB5C; }
+  .ct-campo.c-azul input:focus{ border-color:#1D5FA8; box-shadow:0 0 0 3px rgba(29,95,168,0.18); }
+  .ct-campo.c-verde input:focus{ border-color:#1B7A4F; box-shadow:0 0 0 3px rgba(27,122,79,0.18); }
+  .ct-campo.c-amarelo input:focus{ border-color:#B38F00; box-shadow:0 0 0 3px rgba(179,143,0,0.2); }
+  .ct-campo input:disabled{ opacity:.75; }
+  .ct-campo.c-azul input.salvo{ border-color:var(--ok); } .ct-campo.c-verde input.salvo{ border-color:var(--ok); } .ct-campo.c-amarelo input.salvo{ border-color:var(--ok); }
+  .ct-campo input.erro{ border-color:var(--danger) !important; }
+  .ct-calc span{ white-space:nowrap; }
+  .btn-data{ padding:4px 10px; font-size:12px; margin-left:10px; vertical-align:middle; }
   .ct-calc{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
   .ct-calc div{ background:var(--surface-2); border-radius:8px; padding:6px 8px; text-align:center; }
   .ct-calc span{ display:block; font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.03em; }
@@ -421,7 +437,10 @@
     header{ padding:14px 16px; flex-wrap:wrap; gap:10px; }
     .tabs{ padding:0 8px; overflow-x:auto; }
     main{ padding:18px 14px 60px; }
-    .ct-linha{ grid-template-columns:1fr 1fr 1fr; }
+    .ct-linha{ grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    .ct-campo label{ font-size:9.5px; letter-spacing:0.01em; }
+    .ct-calc span{ font-size:8.5px; letter-spacing:0; }
+    .ct-calc div{ padding:6px 4px; }
     .ct-prod{ grid-column:1 / -1; }
     .ct-calc{ grid-column:1 / -1; }
     .ct-titulo{ font-size:22px; }
@@ -450,7 +469,24 @@
   .val-diverg{ background:rgba(199,68,46,0.15); color:#a8321f; }
   .val-semmagis{ background:var(--surface-3); color:var(--text-muted); }
   .val-resumo{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
-  .hist-quem{ font-size:13px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); }
+  .hist-tabela th, .hist-tabela td{ padding:8px 6px; }
+  .hist-tabela th{ white-space:nowrap; font-size:10px; letter-spacing:0.02em; }
+  .hist-tabela td{ white-space:nowrap; }
+  .hist-tabela td.td-nome{ white-space:normal; min-width:150px; max-width:220px; text-align:left; }
+  .hist-tabela th.th-magis{ background:#6B3FA0; color:#fff; }
+  .hist-tabela td.td-magis{ background:#EFE8F8; color:#4E2A80; font-weight:700; border-left:2px solid #6B3FA0; border-right:2px solid #6B3FA0; }
+  .hist-tabela th.th-total{ background:#E7E7EC; }
+  .hist-quem{ display:inline-flex; gap:4px; }
+  .hist-quem button{ border-radius:4px; padding:5px 9px; font-size:12px; font-weight:700; border:2px solid var(--border); background:var(--surface); color:var(--text-muted); cursor:pointer; }
+  .hist-quem button[data-quem="magis"]:hover{ border-color:#6B3FA0; color:#6B3FA0; }
+  .hist-quem button[data-quem="contagem"]:hover{ border-color:#7A4A21; color:#7A4A21; }
+  .hist-quem button[data-quem="magis"].on{ background:#6B3FA0; border-color:#6B3FA0; color:#fff; }
+  .hist-quem button[data-quem="contagem"].on{ background:#7A4A21; border-color:#7A4A21; color:#fff; }
+  .quem-tag{ display:inline-block; border-radius:4px; padding:5px 12px; font-size:12px; font-weight:700; color:#fff; }
+  .quem-tag.magis{ background:#6B3FA0; } .quem-tag.contagem{ background:#7A4A21; }
+  .hist-tabela input.ed{ width:64px; text-align:center; font-family:'JetBrains Mono',monospace; font-weight:600; padding:5px 4px; border:1.5px solid var(--border); border-radius:6px; }
+  .hist-tabela input.ed.salvo{ border-color:var(--ok); } .hist-tabela input.ed.erro{ border-color:var(--danger); }
+  .hist-tabela .btn-del{ padding:3px 8px; font-size:12px; color:var(--danger); }
 </style>
 </head>
 <body>
@@ -981,6 +1017,26 @@
   </div>
 </div>
 
+<div class="overlay" id="overlay-ct-data">
+  <div class="modal" style="max-width:420px; width:95vw;">
+    <div class="modal-head">
+      <h2>Editar data da contagem</h2>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Data da contagem</label>
+        <input type="date" id="ct-data-nova" style="font-size:18px; padding:12px;">
+      </div>
+      <p id="ct-data-erro" style="color:var(--danger); font-size:13px; min-height:16px;"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="ghost" data-close>Cancelar</button>
+      <button class="primary" id="btn-ct-data-ok">Salvar data</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ====== CONFIGURAÇÃO SUPABASE ======
 const SUPABASE_URL = "https://xvecqetlptysnsjadvzb.supabase.co";
@@ -1075,7 +1131,8 @@ function toast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2600);
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(()=>t.classList.remove('show'), msg.length > 70 ? 6000 : 2600);
 }
 
 let PENDENTES = [];
@@ -1803,7 +1860,46 @@ document.getElementById('btn-sync-shopee').addEventListener('click', sincronizar
 
 document.getElementById('btn-conectar-ml').addEventListener('click', conectarMercadoLivre);
 document.getElementById('btn-sync-ml').addEventListener('click', sincronizarML);
-document.getElementById('btn-refresh').addEventListener('click', carregarTudo);
+// Atualizar: pede dados novos ao Magis, ML Full e Shopee Full (Amazon é lançamento manual) e recarrega a tela
+let ATUALIZANDO = false;
+async function atualizarTudo(){
+  if (ATUALIZANDO) return;
+  ATUALIZANDO = true;
+  const btn = document.getElementById('btn-refresh');
+  const textoOriginal = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Atualizando...';
+  const canais = [
+    { nome: 'Magis', rota: 'sync-magis5-estoque' },
+    { nome: 'Mercado Livre Full', rota: 'sync-ml-estoque' },
+    { nome: 'Shopee Full', rota: 'sync-shopee-estoque' }
+  ];
+  toast('Atualizando Magis, Mercado Livre e Shopee... pode levar até 1 minuto.');
+  const resultados = await Promise.all(canais.map(async c => {
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/${c.rota}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }
+      });
+      let r = {};
+      try { r = await resp.json(); } catch (e) {}
+      if (!resp.ok || r.ok === false) return { nome: c.nome, erro: (r && r.error) ? String(r.error).slice(0, 90) : ('HTTP ' + resp.status) };
+      return { nome: c.nome, erro: null };
+    } catch (err) {
+      return { nome: c.nome, erro: 'sem conexão' };
+    }
+  }));
+  try { await carregarTudo(); } catch (e) { toast('Erro ao recarregar os dados: ' + e.message); }
+  try { await carregarPendentes(); } catch (e) {}
+  const falhas = resultados.filter(r => r.erro);
+  const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  if (falhas.length === 0) toast(`Estoque atualizado às ${hora}.`);
+  else toast(`Atualizado às ${hora}, mas com erro em: ` + falhas.map(f => `${f.nome} (${f.erro})`).join('; '));
+  btn.disabled = false;
+  btn.textContent = textoOriginal;
+  ATUALIZANDO = false;
+}
+document.getElementById('btn-refresh').addEventListener('click', atualizarTudo);
 
 document.getElementById('btn-auditoria').addEventListener('click', () => {
   document.getElementById('overlay-auditoria').classList.add('open');
@@ -2539,9 +2635,9 @@ function abrirAba(nome){
 const CT = { contagem:null, itens:[], podeEditar:false, podeConfig:false, podeFinalizar:false, fechados:new Set(), salvando:0, cfgSku:null };
 const CT_BLOCOS_BASE = ['TIB KIDS','X-CELL / FLEX GOLD','VARIALL','BOYU CELL','THAMETAL','CABOMIX','AK ACESSÓRIOS'];
 const CT_CAMPOS = [
-  { k:'caixas_fechadas', label:'Caixas fechadas' },
-  { k:'pecas_soltas',    label:'Peças caixa aberta' },
-  { k:'full_interno',    label:'Full interno' }
+  { k:'caixas_fechadas', label:'Caixas fechadas', cor:'c-azul' },
+  { k:'pecas_soltas',    label:'Peças abertas', cor:'c-verde' },
+  { k:'full_interno',    label:'Full interno', cor:'c-amarelo' }
 ];
 
 function ctNum(v){ const n = Number(v); return (v === null || v === undefined || v === '' || isNaN(n)) ? 0 : n; }
@@ -2583,7 +2679,7 @@ async function carregarContagem(){
 
 function ctCampoHtml(it, c, bloqueado){
   const v = it[c.k];
-  return `<div class="ct-campo"><label>${c.label}</label><input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="next" autocomplete="off" data-campo="${c.k}" value="${v == null ? '' : v}"${bloqueado ? ' disabled' : ''}></div>`;
+  return `<div class="ct-campo ${c.cor}"><label>${c.label}</label><input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="next" autocomplete="off" data-campo="${c.k}" value="${v == null ? '' : v}"${bloqueado ? ' disabled' : ''}></div>`;
 }
 
 function ctLinhaHtml(it){
@@ -2624,7 +2720,7 @@ function renderContagem(){
   el.innerHTML = `
     <div class="ct-topo">
       <div>
-        <div class="ct-titulo">Contagem de ${ctData(CT.contagem.data)}</div>
+        <div class="ct-titulo">Contagem de ${ctData(CT.contagem.data)}${CT.podeFinalizar ? '<button class="ghost btn-data" id="btn-ct-data">✎ Editar data</button>' : ''}</div>
         <div class="ct-sub">Em andamento · aberta por ${ctEsc(CT.contagem.criada_por || '')} · os valores são salvos automaticamente</div>
       </div>
       <div class="ct-acoes">
@@ -2759,6 +2855,30 @@ ctEl.addEventListener('click', (e) => {
   if (t.id === 'btn-ct-nova') ctAbrirNova();
   if (t.id === 'btn-ct-atualizar') { carregarContagem(); toast('Lista atualizada.'); }
   if (t.id === 'btn-ct-finalizar') ctFinalizar();
+  if (t.id === 'btn-ct-data') abrirEditarData(CT.contagem.id, CT.contagem.data, async () => { CT.contagem = null; await carregarContagem(); });
+});
+
+// ---- editar data (admin e fiscal), usada na Contagem e no Histórico ----
+let DATA_EDIT = null;
+function abrirEditarData(id, dataAtual, depois){
+  DATA_EDIT = { id, depois };
+  document.getElementById('ct-data-nova').value = String(dataAtual).slice(0,10);
+  document.getElementById('ct-data-erro').textContent = '';
+  document.getElementById('overlay-ct-data').classList.add('open');
+}
+document.getElementById('btn-ct-data-ok').addEventListener('click', async () => {
+  const d = document.getElementById('ct-data-nova').value;
+  const erro = document.getElementById('ct-data-erro');
+  if (!d) { erro.textContent = 'Informe a data.'; return; }
+  if (!DATA_EDIT) return;
+  try {
+    const r = await rpc('ct_data_editar', { p_token: SESSAO.token, p_contagem: DATA_EDIT.id, p_data: d });
+    if (!r || !r.ok) { erro.textContent = (r && r.erro) || 'Erro.'; return; }
+    document.getElementById('overlay-ct-data').classList.remove('open');
+    toast('Data alterada para ' + ctData(d) + '.');
+    const f = DATA_EDIT.depois; DATA_EDIT = null;
+    if (f) await f(d);
+  } catch (e) { erro.textContent = 'Erro de conexão.'; }
 });
 
 function ctAbrirNova(){
@@ -2884,29 +3004,41 @@ function histConferido(it, v){
 }
 const HIST_STATUS_TXT = { ok:'OK', atencao:'Atenção', diverg:'Divergente', semmagis:'Sem Magis' };
 
+function histCelulaNum(it, campo, admin){
+  const val = it[campo];
+  if (!admin) return ctFmt(ctNum(val));
+  return `<input class="ed" type="text" inputmode="numeric" data-ed="${campo}" data-sku="${ctEsc(it.sku)}" value="${val == null ? '' : val}">`;
+}
+
 function renderDetalheHist(){
   const r = HIST_DETALHE;
   const el = document.getElementById('hist-conteudo');
+  const admin = !!(SESSAO && SESSAO.admin === true);
   const cont = { ok:0, atencao:0, diverg:0, semmagis:0 };
   r.itens.forEach(it => { cont[histValida(it).status]++; });
+  const ncol = 13;
   let linhas = '', blocoAtual = null, mostradas = 0;
   r.itens.forEach(it => {
     const v = histValida(it);
     if (HIST_SO_DIVERGENTES && (v.status === 'ok' || v.status === 'semmagis')) return;
     mostradas++;
-    if (it.bloco !== blocoAtual) { blocoAtual = it.bloco; linhas += `<tr class="bloco"><td colspan="14">${ctEsc(blocoAtual || '')}</td></tr>`; }
+    if (it.bloco !== blocoAtual) { blocoAtual = it.bloco; linhas += `<tr class="bloco"><td colspan="${ncol}">${ctEsc(blocoAtual || '')}</td></tr>`; }
     const c = ctCalc(it);
     const conf = histConferido(it, v);
+    const completo = conf === null ? null : conf + ctNum(it.full_interno);
     const seletor = r.pode_conferir
-      ? `<select class="hist-quem" data-conferir="${ctEsc(it.sku)}"><option value="">—</option><option value="contagem"${it.conferido_origem === 'contagem' ? ' selected' : ''}>Contagem</option><option value="magis"${it.conferido_origem === 'magis' ? ' selected' : ''}>Magis</option></select>`
-      : (it.conferido_origem === 'contagem' ? 'Contagem' : it.conferido_origem === 'magis' ? 'Magis' : '—');
-    linhas += `<tr data-sku="${ctEsc(it.sku)}"><td class="sku">${ctEsc(it.sku)}</td><td>${ctEsc(it.nome || '')}</td><td>${it.qtde_caixa ? ctFmt(it.qtde_caixa) : '—'}</td><td>${ctFmt(ctNum(it.caixas_fechadas))}</td><td>${ctFmt(c.bruta)}</td><td>${ctFmt(ctNum(it.pecas_soltas))}</td><td><b>${ctFmt(c.total)}</b></td><td>${ctFmt(ctNum(it.full_interno))}</td><td>${ctFmt(c.comp)}</td>`
-      + `<td>${v.magis === null ? '—' : ctFmt(v.magis)}</td><td><span class="val-pill val-${v.status}" title="${HIST_STATUS_TXT[v.status]}">${v.dif === null ? '—' : (v.dif > 0 ? '+' : '') + ctFmt(v.dif)} · ${histPct(v)}</span></td>`
-      + `<td>${seletor}</td><td class="td-conferido"><b>${conf === null ? '—' : ctFmt(conf)}</b></td></tr>`;
+      ? `<div class="hist-quem" data-conferir="${ctEsc(it.sku)}"><button type="button" data-quem="contagem" class="${it.conferido_origem === 'contagem' ? 'on' : ''}">Contagem</button><button type="button" data-quem="magis" class="${it.conferido_origem === 'magis' ? 'on' : ''}">Magis</button></div>`
+      : (it.conferido_origem ? `<span class="quem-tag ${it.conferido_origem}">${it.conferido_origem === 'magis' ? 'Magis' : 'Contagem'}</span>` : '—');
+    linhas += `<tr data-sku="${ctEsc(it.sku)}"><td class="sku">${ctEsc(it.sku)}</td><td class="td-nome">${ctEsc(it.nome || '')}</td><td>${it.qtde_caixa ? ctFmt(it.qtde_caixa) : '—'}</td>`
+      + `<td>${histCelulaNum(it, 'caixas_fechadas', admin)}</td><td>${ctFmt(c.bruta)}</td><td>${histCelulaNum(it, 'pecas_soltas', admin)}</td><td><b>${ctFmt(c.total)}</b></td>`
+      + `<td class="td-magis">${v.magis === null ? '—' : ctFmt(v.magis)}</td><td><span class="val-pill val-${v.status}" title="${HIST_STATUS_TXT[v.status]}">${v.dif === null ? '—' : (v.dif > 0 ? '+' : '') + ctFmt(v.dif)} · ${histPct(v)}</span></td>`
+      + `<td>${seletor}</td><td class="td-conferido"><b>${conf === null ? '—' : ctFmt(conf)}</b></td>`
+      + `<td>${histCelulaNum(it, 'full_interno', admin)}</td><td class="td-completo"><b>${completo === null ? '—' : ctFmt(completo)}</b></td>`
+      + `</tr>`;
   });
-  if (!mostradas) linhas = `<tr><td colspan="13" style="text-align:center; padding:26px; color:var(--text-muted);">Nenhum produto divergente nesta contagem.</td></tr>`;
+  if (!mostradas) linhas = `<tr><td colspan="${ncol}" style="text-align:center; padding:26px; color:var(--text-muted);">Nenhum produto divergente nesta contagem.</td></tr>`;
   el.innerHTML = `<div class="ct-topo">
-      <div><div class="ct-titulo">Contagem de ${ctData(r.contagem.data)}</div><div class="ct-sub">Finalizada em ${ctDataHora(r.contagem.finalizada_em)}${r.contagem.por ? ' por ' + ctEsc(r.contagem.por) : ''} · validação: qtde total x Magis no momento da finalização</div></div>
+      <div><div class="ct-titulo">Contagem de ${ctData(r.contagem.data)}${r.pode_conferir ? '<button class="ghost btn-data" id="btn-hist-data">✎ Editar data</button>' : ''}</div><div class="ct-sub">Finalizada em ${ctDataHora(r.contagem.finalizada_em)}${r.contagem.por ? ' por ' + ctEsc(r.contagem.por) : ''} · validação: qtde total x Magis no momento da finalização</div></div>
       <div class="ct-acoes"><button class="ghost" id="btn-hist-voltar">← Voltar</button><button class="primary" id="btn-hist-excel">Baixar em Excel</button></div>
     </div>
     <div class="val-resumo">
@@ -2916,8 +3048,9 @@ function renderDetalheHist(){
       <span class="val-pill val-semmagis">Sem Magis: ${cont.semmagis}</span>
       <label class="toggle-check" style="margin-left:auto;"><input type="checkbox" id="hist-so-div"${HIST_SO_DIVERGENTES ? ' checked' : ''}> Ver só divergentes (amarelo e vermelho)</label>
     </div>
-    <p class="hint" style="margin:0 0 10px; font-size:12px; color:var(--text-muted);">Verde: até 2,5% de diferença · Amarelo: até 10% · Vermelho: acima de 10%. Em "Quem está certo?", escolha qual número vale: o escolhido vira o total conferido.</p>
-    <div class="hist-scroll"><table class="hist-tabela"><thead><tr><th>SKU</th><th>Produto</th><th>Qtde/caixa</th><th>Caixas fechadas</th><th>Qtde bruta</th><th>Peças cx aberta</th><th>Qtde total</th><th>Full interno</th><th>Est. completo</th><th>Magis</th><th>Dif. (total − Magis)</th><th>Quem está certo?</th><th>Total conferido</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
+    <p class="hint" style="margin:0 0 10px; font-size:12px; color:var(--text-muted);">Verde: até 2,5% de diferença · Amarelo: até 10% · Vermelho: acima de 10%. Em "Quem está certo?", escolha qual número vale (Contagem ou Magis): o escolhido vira o total conferido, e o estoque completo é o total conferido + full interno.${admin ? ' Como administrador, você pode corrigir os números lançados.' : ''}</p>
+    <div class="hist-scroll"><table class="hist-tabela"><thead><tr><th>SKU</th><th>Produto</th><th>Qtde/caixa</th><th>Caixas fechadas</th><th>Qtde bruta</th><th>Peças abertas</th><th class="th-total">Qtde total</th><th class="th-magis">Magis</th><th>Dif. (total − Magis)</th><th>Quem está certo?</th><th>Total conferido</th><th>Full interno</th><th>Est. completo</th></tr></thead><tbody>${linhas}</tbody></table></div>
+`;
 }
 
 async function abrirDetalheHist(id){
@@ -2933,12 +3066,12 @@ async function abrirDetalheHist(id){
 
 function exportarDetalheHist(){
   if (!HIST_DETALHE) return;
-  const cab = ['Bloco','SKU','Produto','Qtde por caixa','Caixas fechadas','Qtde bruta','Peças caixa aberta','Qtde total','Full interno','Estoque completo','Magis','Diferença (total - Magis)','Diferença %','Situação','Quem está certo?','Total conferido'];
+  const cab = ['Bloco','SKU','Produto','Qtde por caixa','Caixas fechadas','Qtde bruta','Peças abertas','Qtde total','Magis','Diferença (total - Magis)','Diferença %','Situação','Quem está certo?','Total conferido','Full interno','Estoque completo'];
   const linhas = HIST_DETALHE.itens.map(it => {
     const c = ctCalc(it), v = histValida(it), conf = histConferido(it, v);
-    return [it.bloco || '', it.sku, it.nome || '', it.qtde_caixa || '', ctNum(it.caixas_fechadas), c.bruta, ctNum(it.pecas_soltas), c.total, ctNum(it.full_interno), c.comp,
+    return [it.bloco || '', it.sku, it.nome || '', it.qtde_caixa || '', ctNum(it.caixas_fechadas), c.bruta, ctNum(it.pecas_soltas), c.total,
       v.magis === null ? '' : v.magis, v.dif === null ? '' : v.dif, v.pct === null ? '' : (isFinite(v.pct) ? Math.round(v.pct * 1000) / 1000 : 'n/d'), HIST_STATUS_TXT[v.status],
-      it.conferido_origem === 'contagem' ? 'Contagem' : it.conferido_origem === 'magis' ? 'Magis' : '', conf === null ? '' : conf];
+      it.conferido_origem === 'contagem' ? 'Contagem' : it.conferido_origem === 'magis' ? 'Magis' : '', conf === null ? '' : conf, ctNum(it.full_interno), conf === null ? '' : conf + ctNum(it.full_interno)];
   });
   const ws = XLSX.utils.aoa_to_sheet([cab, ...linhas]);
   const wb = XLSX.utils.book_new();
@@ -2946,32 +3079,62 @@ function exportarDetalheHist(){
   XLSX.writeFile(wb, `contagem_${String(HIST_DETALHE.contagem.data).slice(0,10)}.xlsx`);
 }
 
+function histRedesenhar(){
+  const sc = document.querySelector('#hist-conteudo .hist-scroll');
+  const x = sc ? sc.scrollLeft : 0, y = window.scrollY;
+  renderDetalheHist();
+  const sc2 = document.querySelector('#hist-conteudo .hist-scroll');
+  if (sc2) sc2.scrollLeft = x;
+  window.scrollTo(0, y);
+}
+
 document.getElementById('hist-conteudo').addEventListener('change', async (e) => {
   const t = e.target;
   if (t.id === 'hist-so-div') { HIST_SO_DIVERGENTES = t.checked; renderDetalheHist(); return; }
-  if (t.dataset && t.dataset.conferir && HIST_DETALHE) {
-    const sku = t.dataset.conferir;
-    const it = HIST_DETALHE.itens.find(i => i.sku === sku);
-    const origem = t.value || null;
+  if (t.dataset && t.dataset.ed && HIST_DETALHE) {
+    const it = HIST_DETALHE.itens.find(i => i.sku === t.dataset.sku);
+    if (!it) return;
+    const limpo = t.value.replace(/\D/g, '');
+    const valor = limpo === '' ? null : Number(limpo);
     try {
-      const r = await rpc('ct_conferir', { p_token: SESSAO.token, p_contagem: HIST_DETALHE.contagem.id, p_sku: sku, p_origem: origem });
+      const r = await rpc('ct_item_editar', { p_token: SESSAO.token, p_contagem: HIST_DETALHE.contagem.id, p_sku: it.sku, p_campo: t.dataset.ed, p_valor: valor });
       if (!r || !r.ok) throw new Error((r && r.erro) || 'erro');
-      it.conferido_origem = origem;
-      const tr = t.closest('tr');
-      const conf = histConferido(it, histValida(it));
-      tr.querySelector('.td-conferido').innerHTML = `<b>${conf === null ? '—' : ctFmt(conf)}</b>`;
+      it[t.dataset.ed] = valor;
+      toast('Valor corrigido: ' + it.sku);
+      histRedesenhar();
     } catch (err) {
+      t.classList.add('erro');
       toast('Não foi possível salvar: ' + err.message);
-      t.value = it.conferido_origem || '';
     }
   }
 });
 
-document.getElementById('hist-conteudo').addEventListener('click', (e) => {
+async function histConferirClique(btn){
+  const box = btn.closest('[data-conferir]');
+  const sku = box.dataset.conferir;
+  const it = HIST_DETALHE.itens.find(i => i.sku === sku);
+  const clicado = btn.dataset.quem;
+  const origem = it.conferido_origem === clicado ? null : clicado;   // clicar de novo limpa a escolha
+  try {
+    const r = await rpc('ct_conferir', { p_token: SESSAO.token, p_contagem: HIST_DETALHE.contagem.id, p_sku: sku, p_origem: origem });
+    if (!r || !r.ok) throw new Error((r && r.erro) || 'erro');
+    it.conferido_origem = origem;
+    histRedesenhar();
+  } catch (err) {
+    toast('Não foi possível salvar: ' + err.message);
+  }
+}
+
+document.getElementById('hist-conteudo').addEventListener('click', async (e) => {
+  const quem = e.target.closest('.hist-quem button');
+  if (quem && HIST_DETALHE) { histConferirClique(quem); return; }
   const item = e.target.closest('[data-hist]');
   if (item) { abrirDetalheHist(item.dataset.hist); return; }
   if (e.target.id === 'btn-hist-voltar') carregarHistorico();
   if (e.target.id === 'btn-hist-excel') exportarDetalheHist();
+  if (e.target.id === 'btn-hist-data' && HIST_DETALHE) {
+    abrirEditarData(HIST_DETALHE.contagem.id, HIST_DETALHE.contagem.data, async (nova) => { HIST_DETALHE.contagem.data = nova; renderDetalheHist(); });
+  }
 });
 
 // ====================== INICIALIZAÇÃO ======================
