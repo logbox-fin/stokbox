@@ -2971,7 +2971,7 @@ async function carregarHistorico(){
     if (!r || !r.ok) { el.innerHTML = `<div class="ct-vazio"><p>${ctEsc((r && r.erro) || 'Sem acesso.')}</p></div>`; return; }
     if (!r.lista.length) { el.innerHTML = `<div class="ct-topo"><div class="ct-titulo">Histórico de contagens</div></div><div class="ct-vazio"><p>Nenhuma contagem finalizada ainda.</p></div>`; return; }
     el.innerHTML = `<div class="ct-topo"><div><div class="ct-titulo">Histórico de contagens</div><div class="ct-sub">Clique em uma data para ver o detalhe.</div></div></div>` +
-      r.lista.map(c => `<div class="hist-item" data-hist="${ctEsc(c.id)}"><div class="data">${ctData(c.data)}</div><div class="meta">Finalizada em ${ctDataHora(c.finalizada_em)}${c.por ? ' por ' + ctEsc(c.por) : ''}</div></div>`).join('');
+      r.lista.map(c => `<div class="hist-item" data-hist="${ctEsc(c.id)}"><div class="data">${ctData(c.data)}</div><div style="display:flex; align-items:center; gap:14px;"><div class="meta">Finalizada em ${ctDataHora(c.finalizada_em)}${c.por ? ' por ' + ctEsc(c.por) : ''}</div>${(SESSAO && SESSAO.admin === true) ? `<button class="ghost btn-del" data-del-cont="${ctEsc(c.id)}" data-del-data="${ctEsc(c.data)}" title="Excluir esta contagem">Excluir</button>` : ''}</div></div>`).join('');
   } catch (e) {
     el.innerHTML = `<div class="ct-vazio"><p>Erro de conexão.</p><button class="primary" onclick="carregarHistorico()">Tentar de novo</button></div>`;
   }
@@ -3016,7 +3016,7 @@ function renderDetalheHist(){
   const admin = !!(SESSAO && SESSAO.admin === true);
   const cont = { ok:0, atencao:0, diverg:0, semmagis:0 };
   r.itens.forEach(it => { cont[histValida(it).status]++; });
-  const ncol = 13;
+  const ncol = 13 + (admin ? 1 : 0);
   let linhas = '', blocoAtual = null, mostradas = 0;
   r.itens.forEach(it => {
     const v = histValida(it);
@@ -3034,6 +3034,7 @@ function renderDetalheHist(){
       + `<td class="td-magis">${v.magis === null ? '—' : ctFmt(v.magis)}</td><td><span class="val-pill val-${v.status}" title="${HIST_STATUS_TXT[v.status]}">${v.dif === null ? '—' : (v.dif > 0 ? '+' : '') + ctFmt(v.dif)} · ${histPct(v)}</span></td>`
       + `<td>${seletor}</td><td class="td-conferido"><b>${conf === null ? '—' : ctFmt(conf)}</b></td>`
       + `<td>${histCelulaNum(it, 'full_interno', admin)}</td><td class="td-completo"><b>${completo === null ? '—' : ctFmt(completo)}</b></td>`
+      + (admin ? `<td><button class="ghost btn-del" data-del-item="${ctEsc(it.sku)}" title="Excluir este item da contagem">Excluir</button></td>` : '')
       + `</tr>`;
   });
   if (!mostradas) linhas = `<tr><td colspan="${ncol}" style="text-align:center; padding:26px; color:var(--text-muted);">Nenhum produto divergente nesta contagem.</td></tr>`;
@@ -3048,9 +3049,9 @@ function renderDetalheHist(){
       <span class="val-pill val-semmagis">Sem Magis: ${cont.semmagis}</span>
       <label class="toggle-check" style="margin-left:auto;"><input type="checkbox" id="hist-so-div"${HIST_SO_DIVERGENTES ? ' checked' : ''}> Ver só divergentes (amarelo e vermelho)</label>
     </div>
-    <p class="hint" style="margin:0 0 10px; font-size:12px; color:var(--text-muted);">Verde: até 2,5% de diferença · Amarelo: até 10% · Vermelho: acima de 10%. Em "Quem está certo?", escolha qual número vale (Contagem ou Magis): o escolhido vira o total conferido, e o estoque completo é o total conferido + full interno.${admin ? ' Como administrador, você pode corrigir os números lançados.' : ''}</p>
-    <div class="hist-scroll"><table class="hist-tabela"><thead><tr><th>SKU</th><th>Produto</th><th>Qtde/caixa</th><th>Caixas fechadas</th><th>Qtde bruta</th><th>Peças abertas</th><th class="th-total">Qtde total</th><th class="th-magis">Magis</th><th>Dif. (total − Magis)</th><th>Quem está certo?</th><th>Total conferido</th><th>Full interno</th><th>Est. completo</th></tr></thead><tbody>${linhas}</tbody></table></div>
-`;
+    <p class="hint" style="margin:0 0 10px; font-size:12px; color:var(--text-muted);">Verde: até 2,5% de diferença · Amarelo: até 10% · Vermelho: acima de 10%. Em "Quem está certo?", escolha qual número vale (Contagem ou Magis): o escolhido vira o total conferido, e o estoque completo é o total conferido + full interno.${admin ? ' Como administrador, você pode corrigir os números lançados e excluir itens ou a contagem.' : ''}</p>
+    <div class="hist-scroll"><table class="hist-tabela"><thead><tr><th>SKU</th><th>Produto</th><th>Qtde/caixa</th><th>Caixas fechadas</th><th>Qtde bruta</th><th>Peças abertas</th><th class="th-total">Qtde total</th><th class="th-magis">Magis</th><th>Dif. (total − Magis)</th><th>Quem está certo?</th><th>Total conferido</th><th>Full interno</th><th>Est. completo</th>${admin ? '<th></th>' : ''}</tr></thead><tbody>${linhas}</tbody></table></div>
+    ${admin ? '<div style="margin-top:22px; padding-top:14px; border-top:1px solid var(--border);"><button class="ghost btn-del" id="btn-hist-excluir" style="font-size:13px; padding:8px 14px;">Excluir esta contagem</button></div>' : ''}`;
 }
 
 async function abrirDetalheHist(id){
@@ -3077,6 +3078,16 @@ function exportarDetalheHist(){
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Contagem');
   XLSX.writeFile(wb, `contagem_${String(HIST_DETALHE.contagem.data).slice(0,10)}.xlsx`);
+}
+
+async function histExcluirContagem(id, data){
+  if (!confirm(`Excluir a contagem de ${ctData(data)}?\n\nEla some do Histórico. Para recuperar depois, é preciso pedir a restauração.`)) return;
+  try {
+    const r = await rpc('ct_excluir', { p_token: SESSAO.token, p_contagem: id });
+    if (!r || !r.ok) throw new Error((r && r.erro) || 'erro');
+    toast('Contagem excluída.');
+    carregarHistorico();
+  } catch (err) { toast('Não foi possível excluir: ' + err.message); }
 }
 
 function histRedesenhar(){
@@ -3128,10 +3139,26 @@ async function histConferirClique(btn){
 document.getElementById('hist-conteudo').addEventListener('click', async (e) => {
   const quem = e.target.closest('.hist-quem button');
   if (quem && HIST_DETALHE) { histConferirClique(quem); return; }
+  const delC = e.target.closest('[data-del-cont]');
+  if (delC) { e.stopPropagation(); histExcluirContagem(delC.dataset.delCont, delC.dataset.delData); return; }
+  const delI = e.target.closest('[data-del-item]');
+  if (delI && HIST_DETALHE) {
+    const sku = delI.dataset.delItem;
+    if (!confirm(`Excluir o item ${sku} desta contagem?`)) return;
+    try {
+      const r = await rpc('ct_item_excluir', { p_token: SESSAO.token, p_contagem: HIST_DETALHE.contagem.id, p_sku: sku });
+      if (!r || !r.ok) throw new Error((r && r.erro) || 'erro');
+      HIST_DETALHE.itens = HIST_DETALHE.itens.filter(i => i.sku !== sku);
+      toast('Item excluído.');
+      histRedesenhar();
+    } catch (err) { toast('Não foi possível excluir: ' + err.message); }
+    return;
+  }
   const item = e.target.closest('[data-hist]');
   if (item) { abrirDetalheHist(item.dataset.hist); return; }
   if (e.target.id === 'btn-hist-voltar') carregarHistorico();
   if (e.target.id === 'btn-hist-excel') exportarDetalheHist();
+  if (e.target.id === 'btn-hist-excluir' && HIST_DETALHE) { histExcluirContagem(HIST_DETALHE.contagem.id, HIST_DETALHE.contagem.data); return; }
   if (e.target.id === 'btn-hist-data' && HIST_DETALHE) {
     abrirEditarData(HIST_DETALHE.contagem.id, HIST_DETALHE.contagem.data, async (nova) => { HIST_DETALHE.contagem.data = nova; renderDetalheHist(); });
   }
